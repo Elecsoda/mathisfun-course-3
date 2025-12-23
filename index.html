@@ -1,1 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>满足好奇、爱上思考课程系列——神秘的密码课前思考</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;700&display=swap');
 
+        :root {
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --bg: #0a0b10;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: #e2e8f0;
+            font-family: 'Noto Sans SC', sans-serif;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(0, 242, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(112, 0, 255, 0.05) 0%, transparent 50%);
+            min-height: 100vh;
+        }
+
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .cipher-grid {
+            background-image: linear-gradient(rgba(0, 242, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 242, 255, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px -10px rgba(0, 242, 255, 0.3);
+        }
+
+        .glitch-text {
+            text-shadow: 2px 0 var(--primary), -2px 0 var(--secondary);
+            animation: glitch 3s infinite;
+        }
+
+        @keyframes glitch {
+            0% { text-shadow: 2px 0 var(--primary), -2px 0 var(--secondary); }
+            50% { text-shadow: -2px 0 var(--primary), 2px 0 var(--secondary); }
+            100% { text-shadow: 2px 0 var(--primary), -2px 0 var(--secondary); }
+        }
+    </style>
+</head>
+<body class="cipher-grid">
+    <!-- 顶部导航栏 (Logo) -->
+    <nav class="absolute top-0 left-0 w-full p-6 z-10">
+        <div class="container mx-auto flex items-center">
+            <div class="flex items-center space-x-3 group">
+                <!-- Logo 图片 -->
+                <div class="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center overflow-hidden border border-white/20">
+                    <img src="swg.png" alt="孙维刚教育研究院 Logo" class="w-full h-full object-contain">
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-sm text-gray-200 font-bold tracking-wider">孙维刚教育研究院</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-20 relative">
+        <!-- 头部标题 -->
+        <header class="text-center mb-16 pt-8">
+            <p class="text-cyan-400 text-lg mb-2 font-light tracking-[0.2em]">满足好奇、爱上思考课程系列之——</p>
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 glitch-text tracking-wider">
+                神秘的密码 · 课前思考
+            </h1>
+            <div class="inline-block px-4 py-1 rounded-full border border-cyan-500/30 text-gray-400 text-sm mb-8 code-font">
+                PHASE 03: THE ART OF CRYPTOGRAPHY
+            </div>
+            <p class="text-gray-400 max-w-2xl mx-auto leading-relaxed">
+                欢迎来到密码学的思维殿堂。每一个链接背后都隐藏着一段历史或一种逻辑，点击下方模块，开启你的解码之旅。
+            </p>
+        </header>
+
+        <!-- 课程网格 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <!-- 第一讲 -->
+            <a href="./caesar_wheel_1/" class="group">
+                <div class="glass-card p-8 rounded-2xl h-full flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-6">
+                            <span class="text-xs font-bold text-cyan-500">第一讲</span>
+                            <div class="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-black transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></svg>
+                            </div>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2">Q2-凯撒圆盘</h2>
+                        <p class="text-sm text-gray-400 leading-relaxed mb-6">探索古罗马最著名的替代密码，转动圆盘，揭开隐藏的信息。</p>
+                    </div>
+                    <div class="flex items-center text-cyan-400 text-sm font-bold group-hover:translate-x-2 transition-transform">
+                        进入挑战 <span class="ml-2">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 第二讲 -->
+            <a href="./vigene_re/" class="group">
+                <div class="glass-card p-8 rounded-2xl h-full flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-6">
+                            <span class="text-xs font-bold text-purple-500">第二讲</span>
+                            <div class="p-2 rounded-lg bg-purple-500/10 text-purple-400 group-hover:bg-purple-500 group-hover:text-black transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>
+                            </div>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2">Q2-维吉尼亚密码</h2>
+                        <p class="text-sm text-gray-400 leading-relaxed mb-6">从单一替代升级到多表替代，理解密钥如何在加密中发挥关键作用。</p>
+                    </div>
+                    <div class="flex items-center text-purple-400 text-sm font-bold group-hover:translate-x-2 transition-transform">
+                        进入挑战 <span class="ml-2">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 第三讲 -->
+            <a href="./dot_design/" class="group">
+                <div class="glass-card p-8 rounded-2xl h-full flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-6">
+                            <span class="text-xs font-bold text-amber-500">第三讲</span>
+                            <div class="p-2 rounded-lg bg-amber-500/10 text-amber-400 group-hover:bg-amber-500 group-hover:text-black transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="1"/><circle cx="6" cy="12" r="1"/><circle cx="6" cy="18" r="1"/><circle cx="18" cy="6" r="1"/><circle cx="18" cy="12" r="1"/><circle cx="18" cy="18" r="1"/></svg>
+                            </div>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2">Q1-布莱尔盲文</h2>
+                        <p class="text-sm text-gray-400 leading-relaxed mb-6">触摸指尖的密码。学习如何通过有限的圆点组合编织无限的语言。</p>
+                    </div>
+                    <div class="flex items-center text-amber-400 text-sm font-bold group-hover:translate-x-2 transition-transform">
+                        进入挑战 <span class="ml-2">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 第四讲 -->
+            <a href="./binary_clock/" class="group">
+                <div class="glass-card p-8 rounded-2xl h-full flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-6">
+                            <span class="text-xs font-bold text-green-500">第四讲</span>
+                            <div class="p-2 rounded-lg bg-green-500/10 text-green-400 group-hover:bg-green-500 group-hover:text-black transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            </div>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2">Q3-二进制时钟</h2>
+                        <p class="text-sm text-gray-400 leading-relaxed mb-6">跳出十进制思维。在 0 与 1 的闪烁中，读懂计算机如何理解时间。</p>
+                    </div>
+                    <div class="flex items-center text-green-400 text-sm font-bold group-hover:translate-x-2 transition-transform">
+                        进入挑战 <span class="ml-2">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 第七讲 -->
+            <a href="./audio_cipher/" class="group">
+                <div class="glass-card p-8 rounded-2xl h-full flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-6">
+                            <span class="text-xs font-bold text-red-500">第七讲</span>
+                            <div class="p-2 rounded-lg bg-red-500/10 text-red-400 group-hover:bg-red-500 group-hover:text-black transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                            </div>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2">Q1-怪异的声音</h2>
+                        <p class="text-sm text-gray-400 leading-relaxed mb-6">听觉中的秘密。解析频谱中的异常，寻找隐藏在声波里的真实意图。</p>
+                    </div>
+                    <div class="flex items-center text-red-400 text-sm font-bold group-hover:translate-x-2 transition-transform">
+                        进入挑战 <span class="ml-2">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 第八讲 -->
+            <a href="./hide_in_image/" class="group">
+                <div class="glass-card p-8 rounded-2xl h-full flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-6">
+                            <span class="text-xs font-bold text-indigo-500">第八讲</span>
+                            <div class="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500 group-hover:text-black transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            </div>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2">Q2-隐写术</h2>
+                        <p class="text-sm text-gray-400 leading-relaxed mb-6">肉眼可见的，不一定是真实的。学习如何将数据完美隐藏在像素之中。</p>
+                    </div>
+                    <div class="flex items-center text-indigo-400 text-sm font-bold group-hover:translate-x-2 transition-transform">
+                        进入挑战 <span class="ml-2">→</span>
+                    </div>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="mt-24 pt-8 border-t border-white/5 text-center text-gray-500 text-sm code-font">
+            <p>© 2025 孙维刚教育研究院 - 满足好奇爱上思考课程系列</p>
+            <p class="mt-2 opacity-50 tracking-tighter">DECODE THE FUTURE · EMBRACE THE WISDOM</p>
+        </footer>
+    </div>
+</body>
+</html>
