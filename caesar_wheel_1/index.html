@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>凯撒密码轮盘</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&display=swap');
+
+        /* 基础设置 */
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: #111827;
+            color: #e5e5e5;
+            /* 防止移动端橡皮筋效果和滚动 */
+            overflow: hidden; 
+            position: fixed; 
+            width: 100%; 
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* 轮盘主容器 */
+        .wheel-container {
+            position: relative;
+            /* 适配逻辑：在大屏用 vmin，在手机竖屏适当缩小一点比例以留出上下空间 */
+            width: 85vmin;
+            height: 85vmin;
+            max-width: 550px;
+            max-height: 550px;
+            /* 居中 */
+            position: absolute;
+            top: 45%; /* 稍微向上提一点，给底部文字留空间 */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            
+            border-radius: 50%;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 基础圆盘结构 */
+        .ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            box-sizing: border-box;
+        }
+
+        /* --- 外圈 (明文) --- */
+        .outer-ring {
+            width: 100%;
+            height: 100%;
+            background: #374151;
+            border: 4px solid #4b5563;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        /* --- 内圈 (密文) --- */
+        .inner-ring-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 66%;
+            height: 66%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            cursor: grab;
+            border-radius: 50%;
+            background: #1f2937; 
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            /* 增加点击区域，让手机端更容易拖动 */
+            touch-action: none;
+        }
+        
+        .inner-ring-container:active {
+            cursor: grabbing;
+        }
+
+        .inner-ring {
+            width: 100%;
+            height: 100%;
+            background: #1f2937;
+            border: 4px solid #d97706; /* 橙色边框 */
+            border-radius: 50%;
+            position: relative;
+        }
+
+        /* --- 辐射线系统 --- */
+        .tick-container {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 50%; /* 半径 */
+            transform-origin: bottom center;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+        }
+
+        .tick-mark {
+            width: 1px; /* 稍微调细一点，看起来更精致 */
+            background-color: rgba(156, 163, 175, 0.4);
+        }
+        
+        .outer-tick {
+            height: 35%;
+            background-color: #6b7280;
+        }
+
+        .inner-tick {
+            height: 35%; 
+            background-color: #d97706;
+            opacity: 0.6;
+        }
+
+        /* --- 字母样式 --- */
+        .char-container {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 40px;
+            height: 50%;
+            margin-left: -20px;
+            transform-origin: bottom center;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; 
+            padding-top: 2%; 
+        }
+
+        .char-text {
+            display: block;
+            /* 字体适配：最小12px，视口相关，最大22px */
+            font-size: clamp(12px, 3.5vmin, 22px);
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .outer-char { color: #e5e5e5; margin-top: 5px; }
+        .inner-char { color: #fbbf24; margin-top: 5px; }
+
+        /* 中心装饰 */
+        .center-knob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 25%;
+            height: 25%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #374151, #111827);
+            border: 2px solid #4b5563;
+            z-index: 30;
+            pointer-events: none;
+        }
+        
+        /* 底部信息区域 */
+        .footer-area {
+            position: absolute;
+            bottom: 5%; /* 距离底部5%，适配不同长宽比手机 */
+            left: 0;
+            width: 100%;
+            text-align: center;
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="wheel-container">
+        <!-- 外圈 -->
+        <div class="ring outer-ring" id="outerRing"></div>
+
+        <!-- 内圈容器 -->
+        <div class="inner-ring-container" id="innerRingContainer">
+            <div class="inner-ring" id="innerRing">
+                <!-- 中心装饰点 -->
+                <div class="center-knob flex items-center justify-center">
+                    <div class="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(245,158,11,0.8)]"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部信息 -->
+    <div class="footer-area flex flex-col items-center gap-2">
+        <div class="text-gray-500 text-sm tracking-widest opacity-80 uppercase font-sans animate-pulse">
+            拖动内盘
+        </div>
+        <div class="text-gray-600 text-xs font-sans mt-2">
+            @孙维刚教育研究院
+        </div>
+    </div>
+
+    <script>
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const outerRing = document.getElementById('outerRing');
+        const innerRing = document.getElementById('innerRing');
+        const innerRingContainer = document.getElementById('innerRingContainer');
+
+        function initWheel() {
+            const totalChars = 26;
+            const angleStep = 360 / totalChars;
+
+            for (let i = 0; i < totalChars; i++) {
+                const char = alphabet[i];
+                const centerAngle = i * angleStep;
+                const separatorAngle = centerAngle + (angleStep / 2);
+
+                // --- 1. 外圈生成 ---
+                // 分隔线
+                const outerTickBox = document.createElement('div');
+                outerTickBox.className = 'tick-container';
+                outerTickBox.style.transform = `rotate(${separatorAngle}deg)`;
+                const outerTick = document.createElement('div');
+                outerTick.className = 'tick-mark outer-tick';
+                outerTickBox.appendChild(outerTick);
+                outerRing.appendChild(outerTickBox);
+
+                // 字母
+                const outerCharBox = document.createElement('div');
+                outerCharBox.className = 'char-container';
+                outerCharBox.style.transform = `rotate(${centerAngle}deg)`;
+                const outerCharText = document.createElement('span');
+                outerCharText.className = 'char-text outer-char';
+                outerCharText.textContent = char;
+                outerCharBox.appendChild(outerCharText);
+                outerRing.appendChild(outerCharBox);
+
+
+                // --- 2. 内圈生成 ---
+                // 分隔线
+                const innerTickBox = document.createElement('div');
+                innerTickBox.className = 'tick-container';
+                innerTickBox.style.transform = `rotate(${separatorAngle}deg)`;
+                const innerTick = document.createElement('div');
+                innerTick.className = 'tick-mark inner-tick';
+                innerTickBox.appendChild(innerTick);
+                innerRing.appendChild(innerTickBox);
+
+                // 字母
+                const innerCharBox = document.createElement('div');
+                innerCharBox.className = 'char-container';
+                innerCharBox.style.transform = `rotate(${centerAngle}deg)`;
+                const innerCharText = document.createElement('span');
+                innerCharText.className = 'char-text inner-char';
+                innerCharText.textContent = char;
+                innerCharBox.appendChild(innerCharText);
+                innerRing.appendChild(innerCharBox);
+            }
+        }
+
+        initWheel();
+
+        // --- 拖拽交互逻辑 ---
+        
+        let isDragging = false;
+        let startAngle = 0;
+        let currentRotation = 0;
+        let lastRotation = 0;
+
+        function getAngle(clientX, clientY) {
+            const rect = innerRingContainer.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const deltaX = clientX - centerX;
+            const deltaY = clientY - centerY;
+            const rad = Math.atan2(deltaY, deltaX);
+            return rad * (180 / Math.PI);
+        }
+
+        function startDrag(e) {
+            // 阻止默认行为非常重要，特别是在移动端防止滚动
+            if(e.type === 'touchstart') e.preventDefault();
+            
+            isDragging = true;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            startAngle = getAngle(clientX, clientY);
+            
+            innerRing.style.transition = 'none';
+            innerRingContainer.style.cursor = 'grabbing';
+        }
+
+        function onDrag(e) {
+            if (!isDragging) return;
+            // 移动端必须阻止默认事件，防止下拉刷新或页面滚动
+            if(e.type === 'touchmove') e.preventDefault();
+            
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const currentAngle = getAngle(clientX, clientY);
+            let delta = currentAngle - startAngle;
+
+            if (delta > 180) delta -= 360;
+            if (delta < -180) delta += 360;
+
+            currentRotation = lastRotation + delta;
+            innerRing.style.transform = `rotate(${currentRotation}deg)`;
+        }
+
+        function endDrag(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            innerRingContainer.style.cursor = 'grab';
+
+            // 吸附逻辑
+            const step = 360 / 26;
+            const snappedRotation = Math.round(currentRotation / step) * step;
+            
+            innerRing.style.transition = 'transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1.1)';
+            innerRing.style.transform = `rotate(${snappedRotation}deg)`;
+            
+            lastRotation = snappedRotation;
+            currentRotation = snappedRotation;
+        }
+
+        // 事件监听
+        // Passive: false 是为了允许 preventDefault() 生效
+        innerRingContainer.addEventListener('mousedown', startDrag);
+        innerRingContainer.addEventListener('touchstart', startDrag, { passive: false });
+
+        window.addEventListener('mousemove', onDrag);
+        window.addEventListener('touchmove', onDrag, { passive: false });
+
+        window.addEventListener('mouseup', endDrag);
+        window.addEventListener('touchend', endDrag);
+
+    </script>
+</body>
+</html>
