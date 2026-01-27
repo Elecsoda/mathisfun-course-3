@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>古洞密码破解</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #f0f0f0;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        .container {
+            width: 500px;
+            max-width: 90%;
+            margin: 40px auto;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .level {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .level h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .image-container {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .input-container {
+            margin-top: 10px;
+        }
+        .input-container input {
+            padding: 8px;
+            width: 60%;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            outline: none;
+        }
+        .input-container button {
+            padding: 8px 16px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #3498db;
+            color: #fff;
+            cursor: pointer;
+        }
+        .input-container button:hover {
+            background-color: #2980b9;
+        }
+        .feedback {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .hidden {
+            display: none;
+        }
+        /* 最后通关的提示样式 */
+        #finalMessage {
+            text-align: center;
+            margin-top: 40px;
+        }
+        #finalMessage img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        #finalMessage p {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>古洞密码破解</h1>
+        
+        <!-- 第一关 -->
+        <div id="level1" class="level">
+            <h2>第一关</h2>
+            <div class="image-container">
+                <img src="images/level1.png" alt="第一关图片">
+            </div>
+            <div class="input-container">
+                <input type="text" id="password1" placeholder="请输入密码">
+                <button onclick="checkPassword(1)">验证</button>
+            </div>
+            <p id="level1Feedback" class="feedback hidden"></p>
+        </div>
+
+        <!-- 第二关 -->
+        <div id="level2" class="level hidden">
+            <h2>第二关</h2>
+            <div class="image-container">
+                <img src="images/level2.png" alt="第二关图片">
+            </div>
+            <div class="input-container">
+                <input type="text" id="password2" placeholder="请输入密码">
+                <button onclick="checkPassword(2)">验证</button>
+            </div>
+            <p id="level2Feedback" class="feedback hidden"></p>
+        </div>
+
+        <!-- 第三关 -->
+        <div id="level3" class="level hidden">
+            <h2>第三关</h2>
+            <div class="image-container">
+                <img src="images/level3.png" alt="第三关图片">
+            </div>
+            <div class="input-container">
+                <input type="text" id="password3" placeholder="请输入密码">
+                <button onclick="checkPassword(3)">验证</button>
+            </div>
+            <p id="level3Feedback" class="feedback hidden"></p>
+        </div>
+
+        <!-- 第四关 -->
+        <div id="level4" class="level hidden">
+            <h2>第四关</h2>
+            <div class="image-container">
+                <img src="images/level4.png" alt="第四关图片">
+            </div>
+            <div class="input-container">
+                <input type="text" id="password4" placeholder="请输入密码">
+                <button onclick="checkPassword(4)">验证</button>
+            </div>
+            <p id="level4Feedback" class="feedback hidden"></p>
+        </div>
+
+        <!-- 通关后显示的内容 -->
+        <div id="finalMessage" class="hidden">
+            <img src="images/final.png" alt="通关图片">
+            <p>破解完所有密码锁，大门打开了，你缓步离开了这充满古人智慧的山洞。</p>
+        </div>
+    </div>
+
+    <script>
+        // 设置每一关的正确密码
+        const passwords = {
+            1: '772',
+            2: '100011',
+            3: '215936',
+            4: '476'
+        };
+
+        function checkPassword(level) {
+            const userInput = document.getElementById(`password${level}`).value.trim();
+            const feedback = document.getElementById(`level${level}Feedback`);
+
+            if (userInput === passwords[level]) {
+                feedback.textContent = '密码正确！';
+                feedback.style.color = 'green';
+                feedback.classList.remove('hidden');
+
+                // 如果不是最后一关，则显示下一关
+                if (level < 4) {
+                    // 显示下一关
+                    document.getElementById(`level${level + 1}`).classList.remove('hidden');
+                } else {
+                    // 最后一关正确后，显示最终提示
+                    document.getElementById('finalMessage').classList.remove('hidden');
+                }
+            } else {
+                feedback.textContent = '密码错误，请重新输入。';
+                feedback.style.color = 'red';
+                feedback.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
