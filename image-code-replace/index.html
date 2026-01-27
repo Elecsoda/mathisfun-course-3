@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>替代式图像加密工具</title>
+  <style>
+    body {
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      margin: 20px;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+    h1 {
+      margin-bottom: 15px;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-end;
+      margin-bottom: 20px;
+    }
+    .toolbar label {
+      margin-right: 5px;
+      font-weight: 600;
+    }
+    .toolbar select {
+      font-size: 14px;
+      padding: 4px 8px;
+    }
+    button, input, label {
+      font-size: 14px;
+    }
+    button {
+      background: #007bff;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      margin-top: 5px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    /* 加密模式面板 */
+    .modePanel {
+      display: none; /* 默认隐藏，根据下拉选择显示 */
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.05);
+      margin-bottom: 10px;
+    }
+    /* Canvas容器：相对定位，以便overlayCanvas绝对定位覆盖 */
+    .canvasContainer {
+      position: relative; 
+      margin-bottom: 20px;
+      /* 不做宽度限制，让Canvas按其像素大小自然呈现 */
+      display: inline-block; 
+    }
+    /* 主Canvas：不缩放 */
+    #mainCanvas {
+      display: block; 
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin: 0;
+      /* 注意：不要max-width:100%或width:auto，否则会缩放 */
+    }
+    /* 叠加Canvas，绝对定位，覆盖在主Canvas上 */
+    #overlayCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none; /* 不影响鼠标操作 */
+      border: 1px solid transparent;
+    }
+    /* 区域查看面板 */
+    .regionPanel {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.05);
+    }
+    .regionPanel table {
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .regionPanel th, .regionPanel td {
+      border: 1px solid #ccc;
+      padding: 3px 5px;
+      text-align: center;
+    }
+    /* 密钥图预览 */
+    #keyImagePreview {
+      display: block;
+      margin-top: 5px;
+      max-width: 200px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>替代式图像加密工具</h1>
+
+<!-- 顶部工具栏：模式下拉+加载图片+保存图像 -->
+<div class="toolbar">
+  <div>
+    <label for="modeSelect">选择加密模式:</label>
+    <select id="modeSelect">
+      <option value="">请选择</option>
+      <option value="caesar">凯撒加密</option>
+      <option value="vigenere">维吉尼亚加密</option>
+      <option value="random">随机加密</option>
+      <option value="overlay">图片叠加加密</option>
+    </select>
+  </div>
+
+  <div>
+    <button id="loadDefaultBtn">加载默认图(image_code.png)</button>
+    <input type="file" id="fileInput" accept="image/*">
+  </div>
+
+  <div>
+    <button id="saveImageBtn">保存当前图像</button>
+  </div>
+</div>
+
+<!-- 加密模式面板 -->
+<div id="caesarPanel" class="modePanel">
+  <label>凯撒偏移量(可正可负)</label>
+  <input type="number" id="caesarOffset" value="10" step="1">
+  <button id="caesarEncryptBtn">加密</button>
+  <button id="caesarDecryptBtn">解密</button>
+  <p style="font-size: 12px; color:#666;">示例: 偏移量10 => 对(R/G/B)+10后mod 256</p>
+</div>
+
+<div id="vigenerePanel" class="modePanel">
+  <label>关键词(如:bad)</label>
+  <input type="text" id="vigenereKey" value="bad">
+  <label>放大倍数(1~8)</label>
+  <input type="number" id="vigenereFactor" value="1" min="1" max="8">
+  <button id="vigenereEncryptBtn">加密</button>
+  <button id="vigenereDecryptBtn">解密</button>
+</div>
+
+<div id="randomPanel" class="modePanel">
+  <p>随机加密(不可逆)。对每个像素随机增加0~255的偏移。</p>
+  <button id="randomEncryptBtn">随机加密</button>
+</div>
+
+<div id="overlayPanel" class="modePanel">
+  <label>秘钥图(同尺寸或自动缩放)</label>
+  <input type="file" id="keyImageInput" accept="image/*">
+  <img id="keyImagePreview" alt="密钥图预览" style="display:none;">
+  <button id="overlayEncryptBtn">叠加加密</button>
+  <button id="overlayDecryptBtn">叠加解密</button>
+</div>
+
+<!-- 主Canvas + 叠加Canvas -->
+<div class="canvasContainer">
+  <canvas id="mainCanvas"></canvas>
+  <canvas id="overlayCanvas"></canvas>
+</div>
+
+<!-- 区域像素查看面板 -->
+<div class="regionPanel">
+  <h3>像素区域查看(半透明高亮)</h3>
+  <div style="margin-bottom: 5px;">
+    <label>X:</label>
+    <input type="number" id="regionX" value="0" style="width:50px;">
+    <label>Y:</label>
+    <input type="number" id="regionY" value="0" style="width:50px;">
+    <label>宽度:</label>
+    <input type="number" id="regionW" value="10" style="width:50px;">
+    <label>高度:</label>
+    <input type="number" id="regionH" value="10" style="width:50px;">
+    <button id="viewRegionBtn">查看区域像素</button>
+    <button id="clearHighlightBtn">清除高亮</button>
+  </div>
+  <div style="overflow:auto;">
+    <table id="regionTable"></table>
+  </div>
+</div>
+
+<script>
+/***********************************************************
+ * 0. 全局变量
+ ***********************************************************/
+const modeSelect = document.getElementById('modeSelect');
+const caesarPanel = document.getElementById('caesarPanel');
+const vigenerePanel = document.getElementById('vigenerePanel');
+const randomPanel = document.getElementById('randomPanel');
+const overlayPanel = document.getElementById('overlayPanel');
+
+const loadDefaultBtn = document.getElementById('loadDefaultBtn');
+const fileInput = document.getElementById('fileInput');
+const saveImageBtn = document.getElementById('saveImageBtn');
+const mainCanvas = document.getElementById('mainCanvas');
+const mainCtx = mainCanvas.getContext('2d');
+const overlayCanvas = document.getElementById('overlayCanvas');
+const overlayCtx = overlayCanvas.getContext('2d');
+
+const regionXInput = document.getElementById('regionX');
+const regionYInput = document.getElementById('regionY');
+const regionWInput = document.getElementById('regionW');
+const regionHInput = document.getElementById('regionH');
+const viewRegionBtn = document.getElementById('viewRegionBtn');
+const clearHighlightBtn = document.getElementById('clearHighlightBtn');
+const regionTable = document.getElementById('regionTable');
+
+// 凯撒
+const caesarOffsetInput = document.getElementById('caesarOffset');
+const caesarEncryptBtn = document.getElementById('caesarEncryptBtn');
+const caesarDecryptBtn = document.getElementById('caesarDecryptBtn');
+
+// 维吉尼亚
+const vigenereKeyInput = document.getElementById('vigenereKey');
+const vigenereFactorInput = document.getElementById('vigenereFactor');
+const vigenereEncryptBtn = document.getElementById('vigenereEncryptBtn');
+const vigenereDecryptBtn = document.getElementById('vigenereDecryptBtn');
+
+// 随机
+const randomEncryptBtn = document.getElementById('randomEncryptBtn');
+
+// 叠加
+const keyImageInput = document.getElementById('keyImageInput');
+const keyImagePreview = document.getElementById('keyImagePreview');
+const overlayEncryptBtn = document.getElementById('overlayEncryptBtn');
+const overlayDecryptBtn = document.getElementById('overlayDecryptBtn');
+
+let imageWidth = 0;
+let imageHeight = 0;
+let keyImageData = null; // 存储秘钥图像像素数据
+
+/***********************************************************
+ * 1. 初始化/加载图
+ ***********************************************************/
+window.addEventListener('load', () => {
+  loadImage('image_code.png');
+});
+
+loadDefaultBtn.addEventListener('click', () => {
+  loadImage('image_code.png');
+});
+
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) {
+    let url = URL.createObjectURL(file);
+    loadImage(url);
+  }
+});
+
+function loadImage(src) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    imageWidth = img.width;
+    imageHeight = img.height;
+    // 让Canvas大小与图像像素1:1对应
+    mainCanvas.width = imageWidth;
+    mainCanvas.height = imageHeight;
+    overlayCanvas.width = imageWidth;
+    overlayCanvas.height = imageHeight;
+    overlayCtx.clearRect(0, 0, imageWidth, imageHeight);
+
+    mainCtx.drawImage(img, 0, 0, imageWidth, imageHeight);
+    alert('图片加载成功！');
+  };
+  img.onerror = () => {
+    alert('图片加载失败。');
+  };
+  img.src = src;
+}
+
+/***********************************************************
+ * 2. 模式下拉选择
+ ***********************************************************/
+modeSelect.addEventListener('change', () => {
+  caesarPanel.style.display = 'none';
+  vigenerePanel.style.display = 'none';
+  randomPanel.style.display = 'none';
+  overlayPanel.style.display = 'none';
+
+  const val = modeSelect.value;
+  if (val === 'caesar') caesarPanel.style.display = 'block';
+  if (val === 'vigenere') vigenerePanel.style.display = 'block';
+  if (val === 'random') randomPanel.style.display = 'block';
+  if (val === 'overlay') overlayPanel.style.display = 'block';
+});
+
+/***********************************************************
+ * 3. 保存当前图像
+ ***********************************************************/
+saveImageBtn.addEventListener('click', () => {
+  if (!imageWidth || !imageHeight) {
+    alert('尚未加载任何图像');
+    return;
+  }
+  const dataURL = mainCanvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = dataURL;
+  a.download = 'encrypted_image.png';
+  a.click();
+});
+
+/***********************************************************
+ * 4. 工具函数: 读/写Canvas像素数据
+ ***********************************************************/
+function getImageDataArray() {
+  let imgData = mainCtx.getImageData(0, 0, imageWidth, imageHeight);
+  return imgData.data;
+}
+function putImageDataArray(arr) {
+  let imgData = mainCtx.createImageData(imageWidth, imageHeight);
+  imgData.data.set(arr);
+  mainCtx.putImageData(imgData, 0, 0);
+}
+
+/***********************************************************
+ * 5. 凯撒加密/解密
+ ***********************************************************/
+caesarEncryptBtn.addEventListener('click', () => {
+  if (!imageWidth || !imageHeight) return alert('请先加载图片');
+  const offset = parseInt(caesarOffsetInput.value) || 0;
+  applyCaesar(offset);
+});
+caesarDecryptBtn.addEventListener('click', () => {
+  if (!imageWidth || !imageHeight) return alert('请先加载图片');
+  const offset = parseInt(caesarOffsetInput.value) || 0;
+  applyCaesar(-offset);
+});
+function applyCaesar(offset) {
+  let arr = getImageDataArray();
+  for (let i = 0; i < arr.length; i += 4) {
+    arr[i]   = (arr[i]   + offset + 256) % 256;
+    arr[i+1] = (arr[i+1] + offset + 256) % 256;
+    arr[i+2] = (arr[i+2] + offset + 256) % 256;
+  }
+  putImageDataArray(arr);
+}
+
+/***********************************************************
+ * 6. 维吉尼亚加密/解密
+ ***********************************************************/
+vigenereEncryptBtn.addEventListener('click', () => {
+  if (!imageWidth || !imageHeight) return alert('请先加载图片');
+  applyVigenere(false);
+});
+vigenereDecryptBtn.addEventListener('click', () => {
+  if (!imageWidth || !imageHeight) return alert('请先加载图片');
+  applyVigenere(true);
+});
+function charToOffset(c) {
+  c = c.toLowerCase();
+  let base = 'a'.charCodeAt(0);
+  let code = c.charCodeAt(0);
+  let delta = code - base;
+  if (delta < 0 || delta > 25) delta = 0; 
+  return delta;
+}
+function applyVigenere(isDecrypt) {
+  let arr = getImageDataArray();
+  const keyStr = vigenereKeyInput.value || 'a';
+  let factor = parseInt(vigenereFactorInput.value) || 1;
+  factor = Math.max(1, Math.min(8, factor));
+
+  // 生成keyOffsets
+  let keyOffsets = [];
+  for (let i=0; i<keyStr.length; i++){
+    let off = charToOffset(keyStr[i]) * factor;
+    off = off % 256;
+    keyOffsets.push(off);
+  }
+  if (!keyOffsets.length) keyOffsets = [0];
+
+  let idx = 0;
+  for (let i=0; i < arr.length; i+=4) {
+    let offset = keyOffsets[idx % keyOffsets.length];
+    if (isDecrypt) offset = -offset;
+    arr[i]   = (arr[i]   + offset + 256) % 256; 
+    arr[i+1] = (arr[i+1] + offset + 256) % 256;
+    arr[i+2] = (arr[i+2] + offset + 256) % 256;
+    idx++;
+  }
+  putImageDataArray(arr);
+}
+
+/***********************************************************
+ * 7. 随机加密(不可逆)
+ ***********************************************************/
+randomEncryptBtn.addEventListener('click', () => {
+  if (!imageWidth || !imageHeight) return alert('请先加载图片');
+  let arr = getImageDataArray();
+  for (let i=0; i < arr.length; i+=4) {
+    arr[i]   = (arr[i]   + Math.floor(Math.random()*256)) % 256; 
+    arr[i+1] = (arr[i+1] + Math.floor(Math.random()*256)) % 256;
+    arr[i+2] = (arr[i+2] + Math.floor(Math.random()*256)) % 256;
+  }
+  putImageDataArray(arr);
+});
+
+/***********************************************************
+ * 8. 图片叠加加密/解密
+ ***********************************************************/
+keyImageInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) {
+    loadKeyImage(URL.createObjectURL(file));
+  }
+});
+function loadKeyImage(src) {
+  const img = new Image();
+  img.onload = () => {
+    if (!imageWidth || !imageHeight) {
+      alert('请先加载主图，再加载秘钥图');
+      return;
+    }
+    // 缩放到与主图相同尺寸
+    const c = document.createElement('canvas');
+    c.width = imageWidth;
+    c.height = imageHeight;
+    c.getContext('2d').drawImage(img, 0, 0, imageWidth, imageHeight);
+    keyImageData = c.getContext('2d').getImageData(0,0,imageWidth,imageHeight).data;
+
+    keyImagePreview.style.display = 'block';
+    keyImagePreview.src = c.toDataURL();
+    alert('秘钥图加载成功!');
+  };
+  img.onerror = () => alert('秘钥图加载失败');
+  img.src = src;
+}
+overlayEncryptBtn.addEventListener('click', () => {
+  if (!imageWidth || !imageHeight) return alert('请先加载图片');
+  if (!keyImageData) return alert('请先加载密钥图');
+  applyOverlay(true);
+});
+overlayDecryptBtn.addEventListener('click', () => {
+  if (!imageWidth || !imageHeight) return alert('请先加载图片');
+  if (!keyImageData) return alert('请先加载密钥图');
+  applyOverlay(false);
+});
+function applyOverlay(isEncrypt) {
+  let arr = getImageDataArray();
+  for (let i=0; i < arr.length; i+=4) {
+    if (isEncrypt) {
+      arr[i]   = (arr[i]   + keyImageData[i])   % 256;
+      arr[i+1] = (arr[i+1] + keyImageData[i+1]) % 256;
+      arr[i+2] = (arr[i+2] + keyImageData[i+2]) % 256;
+    } else {
+      arr[i]   = (arr[i]   - keyImageData[i]   + 256) % 256;
+      arr[i+1] = (arr[i+1] - keyImageData[i+1] + 256) % 256;
+      arr[i+2] = (arr[i+2] - keyImageData[i+2] + 256) % 256;
+    }
+  }
+  putImageDataArray(arr);
+}
+
+/***********************************************************
+ * 9. 区域像素查看 + 半透明高亮
+ ***********************************************************/
+viewRegionBtn.addEventListener('click', () => {
+  if (!imageWidth || !imageHeight) return alert('请先加载主图');
+  const x = parseInt(regionXInput.value) || 0;
+  const y = parseInt(regionYInput.value) || 0;
+  const w = parseInt(regionWInput.value) || 1;
+  const h = parseInt(regionHInput.value) || 1;
+
+  const x2 = Math.min(x + w, imageWidth);
+  const y2 = Math.min(y + h, imageHeight);
+  const rw = x2 - x;
+  const rh = y2 - y;
+  if (rw <= 0 || rh <= 0) {
+    alert('区域范围错误');
+    return;
+  }
+
+  // 在overlayCanvas上绘制半透明矩形
+  overlayCtx.clearRect(0, 0, imageWidth, imageHeight);
+  overlayCtx.save();
+  overlayCtx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+  overlayCtx.fillRect(x, y, rw, rh);
+  overlayCtx.restore();
+
+  // 显示表格
+  showRegionTable(x, y, rw, rh);
+});
+
+// 清除高亮
+clearHighlightBtn.addEventListener('click', () => {
+  if (!imageWidth || !imageHeight) return;
+  overlayCtx.clearRect(0, 0, imageWidth, imageHeight);
+});
+
+function showRegionTable(x, y, w, h) {
+  regionTable.innerHTML = '';
+  const arr = getImageDataArray();
+
+  let headerRow = document.createElement('tr');
+  headerRow.innerHTML = `<th>行\\列</th>` + 
+    Array.from({length: w}, (_,i)=>`<th>${i}</th>`).join('');
+  regionTable.appendChild(headerRow);
+
+  for (let row=0; row<h; row++) {
+    let tr = document.createElement('tr');
+    let thRow = document.createElement('th');
+    thRow.textContent = row;
+    tr.appendChild(thRow);
+
+    for (let col=0; col<w; col++) {
+      const td = document.createElement('td');
+      let px = x + col;
+      let py = y + row;
+      let idx = (py*imageWidth + px)*4;
+      let r = arr[idx], g = arr[idx+1], b = arr[idx+2];
+      td.textContent = `(${r},${g},${b})`;
+      tr.appendChild(td);
+    }
+    regionTable.appendChild(tr);
+  }
+}
+</script>
+
+</body>
+</html>
