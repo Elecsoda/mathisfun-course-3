@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>记忆挑战游戏</title>
+  <style>
+    /* ===== 页面整体美化 ===== */
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to bottom, #fefefe, #dcdcdc);
+      font-family: "Microsoft Yahei", sans-serif;
+    }
+
+    header {
+      background-color: #5a99d3;
+      padding: 20px;
+      text-align: center;
+      color: #fff;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 32px;
+    }
+
+    /* ===== 主内容区 ===== */
+    .container {
+      width: 90%;
+      max-width: 1000px;
+      margin: 20px auto;
+      background-color: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      padding: 20px 30px;
+      box-sizing: border-box;
+    }
+
+    .mode-selector {
+      text-align: center;
+      margin: 20px 0 30px;
+    }
+
+    .mode-selector button {
+      background-color: #5a99d3;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      margin: 0 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .mode-selector button:hover {
+      background-color: #4885bd;
+    }
+
+    .section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 2px dashed #ccc;
+      border-radius: 6px;
+    }
+
+    .section h2 {
+      margin-top: 0;
+      font-size: 24px;
+      color: #333;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* ===== 记忆画布 ===== */
+    .memory-canvas {
+      position: relative; /* 以便蒙板绝对定位覆盖 */
+      margin-top: 20px;
+      margin-bottom: 20px;
+      padding: 20px;
+      background-color: #f0f8ff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .random-number-display {
+      font-size: 48px;
+      font-weight: bold;
+      text-align: center;
+      word-wrap: break-word;
+      line-height: 1.5;
+    }
+
+    /* ===== 蒙板样式（纯色，完全遮挡）===== */
+    .mask {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000; /* 不透明黑色背景 */
+      color: #fff;
+      text-align: center;
+      cursor: pointer;
+      display: none; /* 默认隐藏 */
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+    }
+    .mask p {
+      font-size: 24px;
+    }
+
+    /* ===== 输入与结果 ===== */
+    .input-area, .result-message {
+      margin-top: 10px;
+    }
+    .result-message {
+      font-weight: bold;
+      white-space: pre-line;
+    }
+    .red {
+      color: red;
+    }
+    .green {
+      color: green;
+    }
+
+    /* ===== 模式2 的两个区域 + 样式 ===== */
+    .flex-container {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+    .flex-box {
+      flex: 1 1 100px;
+      min-width: 150px;
+    }
+
+    .expressions-container, .words-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .expression-item, .word-item {
+      font-size: 18px;
+      font-weight: bold;
+      padding: 5px;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    .check-container, .input-words-container {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .word-input-item {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    /* 按钮统一样式 */
+    button {
+      background-color: #5a99d3;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      margin: 6px 0;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #4885bd;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>记忆挑战游戏</h1>
+  </header>
+
+  <div class="container">
+    <!-- ============ 模式选择按钮 ============ -->
+    <div class="mode-selector">
+      <button onclick="showMode(1)">模式1：随机数记忆挑战</button>
+      <button onclick="showMode(2)">模式2：记忆 + 推理双重任务</button>
+    </div>
+
+    <!-- ================== 模式1：随机数记忆挑战 ================== -->
+    <div id="mode1" class="section hidden">
+      <h2>模式1：随机数记忆挑战</h2>
+      <div class="input-area">
+        <label for="numDigits">随机数位数：</label>
+        <input type="number" id="numDigits" value="5" min="1" max="50" />
+        
+        <label for="displayTime1">显示时间(秒)：</label>
+        <input type="number" id="displayTime1" value="5" min="1" max="60" />
+        
+        <button onclick="generateRandomNumber()">生成随机数</button>
+      </div>
+
+      <!-- 记忆画布（核心内容 & 蒙板） -->
+      <div class="memory-canvas" id="mode1Canvas">
+        <div id="randomNumberContainer" class="random-number-display"></div>
+        <div id="mask1" class="mask" onclick="removeMask(1)">
+          <p>点击查看原数字</p>
+        </div>
+      </div>
+      
+      <!-- 用户输入和验证 -->
+      <div class="input-area">
+        <label for="userNumberInput">请输入你记住的数字：</label><br/>
+        <input type="text" id="userNumberInput" style="width:200px" />
+        <button onclick="checkRandomNumber()">验证</button>
+      </div>
+      <div id="mode1Result" class="result-message"></div>
+    </div>
+
+    <!-- ================== 模式2：记忆 + 推理双重任务 ================== -->
+    <div id="mode2" class="section hidden">
+      <h2>模式2：记忆与推理双重任务</h2>
+      <div class="input-area">
+        <label for="displayTime2">显示时间(秒)：</label>
+        <input type="number" id="displayTime2" value="10" min="1" max="60" />
+        <button onclick="generateExpressionsAndWords()">生成题目</button>
+      </div>
+
+      <!-- 记忆画布（核心内容 & 蒙板），左右放置算式（左）和词语（右） -->
+      <div class="memory-canvas" id="mode2Canvas">
+        <div class="flex-container">
+          <div class="flex-box">
+            <h3>随机算式</h3>
+            <div id="expressionsContainer" class="expressions-container"></div>
+          </div>
+          <div class="flex-box">
+            <h3>随机词语</h3>
+            <div id="wordsContainer" class="words-container"></div>
+          </div>
+        </div>
+        <!-- 蒙版2 -->
+        <div id="mask2" class="mask" onclick="removeMask(2)">
+          <p>点击查看原题目</p>
+        </div>
+      </div>
+
+      <!-- 答题区：左右布局；左侧判断算式，右侧填词语 -->
+      <div class="flex-container">
+        <div class="flex-box">
+          <h4>请判断以下算式是否正确(勾选你认为正确的算式)</h4>
+          <div id="expressionsCheckContainer" class="check-container"></div>
+        </div>
+        <div class="flex-box">
+          <h4>请填写你记住的4个词语</h4>
+          <div id="inputWordsContainer" class="input-words-container"></div>
+        </div>
+      </div>
+      <button onclick="checkExpressionsAndWords()">验证</button>
+      <div id="mode2Result" class="result-message"></div>
+    </div>
+  </div>
+
+<script>
+/* ---------------- 全局控制 ---------------- */
+function showMode(mode) {
+  document.getElementById('mode1').classList.add('hidden');
+  document.getElementById('mode2').classList.add('hidden');
+  if (mode === 1) {
+    document.getElementById('mode1').classList.remove('hidden');
+  } else {
+    document.getElementById('mode2').classList.remove('hidden');
+  }
+}
+
+/* ============================ 模式1相关逻辑 ============================ */
+let generatedNumber = "";
+let rollingIntervals = [];
+let maskTimer1 = null;
+
+/**
+ * 生成随机数并显示滚动效果
+ */
+function generateRandomNumber() {
+  clearRandomNumber(); // 清除上一次的结果
+  // 获取设置
+  const numDigits = parseInt(document.getElementById('numDigits').value, 10) || 5;
+  
+  // 随机生成数字字符串
+  generatedNumber = "";
+  for (let i = 0; i < numDigits; i++) {
+    generatedNumber += Math.floor(Math.random() * 10);
+  }
+
+  // 显示滚动效果：先插入若干个 span，用 setInterval 模拟随机滚动，1秒后停止
+  const container = document.getElementById('randomNumberContainer');
+  for (let i = 0; i < numDigits; i++) {
+    const span = document.createElement('span');
+    span.id = `digit-span-${i}`;
+    span.textContent = Math.floor(Math.random() * 10);
+    span.style.marginRight = "5px";
+    container.appendChild(span);
+    
+    // 启动滚动
+    let counter = 0;
+    const interval = setInterval(() => {
+      span.textContent = Math.floor(Math.random() * 10);
+      counter += 100;
+      if (counter >= 1000) { // 1秒后停止
+        clearInterval(interval);
+        span.textContent = generatedNumber[i];
+      }
+    }, 100);
+    rollingIntervals.push(interval);
+  }
+
+  // 启动显示定时器
+  const displayTime = parseInt(document.getElementById('displayTime1').value, 10) || 5;
+  if (maskTimer1) {
+    clearTimeout(maskTimer1);
+  }
+  maskTimer1 = setTimeout(() => {
+    showMask(1);
+  }, displayTime * 1000);
+}
+
+/**
+ * 验证用户输入的数字
+ */
+function checkRandomNumber() {
+  const userInput = document.getElementById('userNumberInput').value;
+  const resultDiv = document.getElementById('mode1Result');
+  
+  if (!generatedNumber) {
+    resultDiv.textContent = "请先生成随机数！";
+    return;
+  }
+  
+  if (userInput.length !== generatedNumber.length) {
+    resultDiv.innerHTML = `<span class="red">数字长度不一致，请检查！</span>`;
+    return;
+  }
+
+  // 检查逐位正确性
+  let correctCount = 0;
+  let resultHtml = "";
+  for (let i = 0; i < generatedNumber.length; i++) {
+    if (userInput[i] === generatedNumber[i]) {
+      // 对的数字用绿色
+      resultHtml += `<span class="green">${userInput[i]}</span>`;
+      correctCount++;
+    } else {
+      // 错误数字标红
+      resultHtml += `<span class="red">${userInput[i]}</span>`;
+    }
+  }
+  
+  // 结果显示
+  if (correctCount === generatedNumber.length) {
+    resultDiv.innerHTML = `<span class="green">恭喜你，全部正确！</span>`;
+  } else {
+    resultDiv.innerHTML = `共 ${generatedNumber.length} 位数字，你错了 ${generatedNumber.length - correctCount} 位。<br/>
+                          你的输入：${resultHtml}`;
+  }
+}
+
+/**
+ * 清空并停止上一次滚动、结果
+ */
+function clearRandomNumber() {
+  rollingIntervals.forEach(interval => clearInterval(interval));
+  rollingIntervals = [];
+  document.getElementById('randomNumberContainer').innerHTML = "";
+  document.getElementById('userNumberInput').value = "";
+  document.getElementById('mode1Result').textContent = "";
+  generatedNumber = "";
+}
+
+/* ==================== 模式1蒙版的显示与隐藏 ==================== */
+function showMask(mode) {
+  const mask = document.getElementById(`mask${mode}`);
+  mask.style.display = "flex"; // 使用flex便于居中
+}
+function removeMask(mode) {
+  const mask = document.getElementById(`mask${mode}`);
+  mask.style.display = "none";
+}
+
+/* ============================ 模式2相关逻辑 ============================ */
+// 词语库（原有17个 + 新增20个）
+const WORDS_POOL = [
+  '电灯','书本','山峰','喜鹊','衣柜','城市','图像','帮助','现代','黑板',
+  '杯子','晴天','遥控','纸巾','电荷','溶液','忙碌',
+  // 新增类似词汇20个
+  '桌面','火车','木马','白云','年轮','乐器','书签','菠萝','文件','太阳',
+  '手机','沙漠','音乐','跑道','灯笼','火焰','相片','海洋','石油','墙壁'
+];
+
+let expressions = [];   // 存储生成的算式 { exprStr: "5 x 10 = 50", isCorrect: true/false, a, b, result }
+let words = [];         // 存储随机词语
+let maskTimer2 = null;
+
+/**
+ * 生成 4 个随机算式(两个因数在5~20之间), 随机对部分算式结果做“调整”
+ * 生成 4 个随机词语
+ */
+function generateExpressionsAndWords() {
+  clearMode2();
+  
+  // 获取显示时间
+  const displayTime2 = parseInt(document.getElementById('displayTime2').value, 10) || 5;
+
+  // 1. 生成算式
+  expressions = [];
+  for (let i = 0; i < 4; i++) {
+    const exprObj = getRandomExpression5To20();
+    // 随机决定是否“改动”结果
+    if (Math.random() < 0.5) {
+      // 保持正确
+      exprObj.isCorrect = true;
+    } else {
+      // 做调整
+      exprObj.isCorrect = false;
+      exprObj.exprStr = adjustExpression(exprObj);
+    }
+    expressions.push(exprObj);
+  }
+  // 将算式显示到页面
+  const exprContainer = document.getElementById('expressionsContainer');
+  expressions.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'expression-item';
+    div.id = `expr-show-${idx}`;
+    div.textContent = item.exprStr;
+    exprContainer.appendChild(div);
+  });
+
+  // 2. 生成 4 个随机词语
+  words = [];
+  const usedIndexes = new Set();
+  while (words.length < 4) {
+    const randIndex = Math.floor(Math.random() * WORDS_POOL.length);
+    if (!usedIndexes.has(randIndex)) {
+      usedIndexes.add(randIndex);
+      words.push(WORDS_POOL[randIndex]);
+    }
+  }
+  // 显示到页面
+  const wordsContainer = document.getElementById('wordsContainer');
+  words.forEach((w, idx) => {
+    const div = document.createElement('div');
+    div.className = 'word-item';
+    div.id = `word-show-${idx}`;
+    div.textContent = w;
+    wordsContainer.appendChild(div);
+  });
+
+  // 启动显示定时器，时间到了后把它盖住
+  if (maskTimer2) clearTimeout(maskTimer2);
+  maskTimer2 = setTimeout(() => {
+    showMask(2);
+  }, displayTime2 * 1000);
+
+  // 生成答题区
+  generateAnswerFields();
+}
+
+/**
+ * 获取一个随机乘法表达式 (a, b 在5~20之间)
+ */
+function getRandomExpression5To20() {
+  let a = Math.floor(Math.random() * 16) + 5; // 5..20
+  let b = Math.floor(Math.random() * 16) + 5; // 5..20
+  let result = a * b;
+  return {
+    exprStr: `${a} x ${b} = ${result}`,
+    a,
+    b,
+    result,
+    isCorrect: false
+  };
+}
+
+/**
+ * 随机修改表达式的结果：在十位加减1 或在个位加减(1~5)
+ */
+function adjustExpression(exprObj) {
+  let { a, b, result } = exprObj;
+  let newResult = result;
+  
+  // 若原结果 >= 10，则有50%概率去改动“十位”(+/-1)，否则改动“个位”(+/-1~5)
+  // 对于可能超过100的数也同样生效；只是只改动十位或个位，作为简单演示
+  if (newResult >= 10 && Math.random() < 0.5) {
+    // 在十位 +/- 1
+    let tens = Math.floor(newResult / 10);
+    let ones = newResult % 10;
+    if (Math.random() < 0.5) {
+      tens = tens + 1;
+    } else {
+      tens = tens - 1;
+    }
+    if (tens < 0) tens = 0; 
+    newResult = tens * 10 + ones;
+  } else {
+    // 在个位 +/- 1~5
+    const delta = Math.floor(Math.random() * 5) + 1; // 1~5
+    if (Math.random() < 0.5) {
+      newResult += delta;
+    } else {
+      newResult -= delta;
+      if (newResult < 0) newResult = 0;
+    }
+  }
+  
+  return `${a} x ${b} = ${newResult}`;
+}
+
+/**
+ * 生成答题区：4个算式的checkbox + 4个词语填空
+ */
+function generateAnswerFields() {
+  const exprCheckContainer = document.getElementById('expressionsCheckContainer');
+  exprCheckContainer.innerHTML = "";
+  expressions.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'checkbox-item';
+    // 加一个checkbox，表示“认为它是正确的”
+    div.innerHTML = `
+      <label>
+        <input type="checkbox" id="check-expr-${idx}" />
+        算式${idx+1}
+      </label>
+    `;
+    exprCheckContainer.appendChild(div);
+  });
+  
+  // 4个填词语
+  const inputWordsContainer = document.getElementById('inputWordsContainer');
+  inputWordsContainer.innerHTML = "";
+  for (let i = 0; i < 4; i++) {
+    const div = document.createElement('div');
+    div.className = 'word-input-item';
+    div.innerHTML = `
+      <label>词语${i+1}：</label>
+      <input type="text" id="input-word-${i}" style="width:100px;" />
+    `;
+    inputWordsContainer.appendChild(div);
+  }
+}
+
+/**
+ * 点击“验证”按钮后，对比结果
+ * 并像模式1一样，标出哪些对了、哪些错了
+ */
+function checkExpressionsAndWords() {
+  const resultDiv = document.getElementById('mode2Result');
+  if (!expressions.length || !words.length) {
+    resultDiv.textContent = "请先生成题目！";
+    return;
+  }
+
+  // 1. 算式判断逐条结果
+  let correctExpressionCount = 0;
+  let expressionsFeedback = "";
+  expressions.forEach((expr, idx) => {
+    const check = document.getElementById(`check-expr-${idx}`);
+    const userThinksCorrect = check.checked;
+    // expr.isCorrect === userThinksCorrect
+    let eachLine = `表达式 ${idx+1}: ${expr.exprStr}`;
+    if (expr.isCorrect === userThinksCorrect) {
+      correctExpressionCount++;
+      eachLine = `<span class="green">${eachLine} —— 你答对了</span>`;
+    } else {
+      eachLine = `<span class="red">${eachLine} —— 你答错了</span>`;
+    }
+    expressionsFeedback += eachLine + "\n";
+  });
+
+  // 2. 词语判断逐条结果
+  let correctWordCount = 0;
+  let wordsFeedback = "";
+  for (let i = 0; i < words.length; i++) {
+    const userWord = document.getElementById(`input-word-${i}`).value.trim();
+    let eachLine = `词语 ${i+1}: 你输入了 “${userWord}”，正确是 “${words[i]}”`;
+    if (userWord === words[i]) {
+      correctWordCount++;
+      eachLine = `<span class="green">${eachLine} —— 正确</span>`;
+    } else {
+      eachLine = `<span class="red">${eachLine} —— 错误</span>`;
+    }
+    wordsFeedback += eachLine + "\n";
+  }
+
+  // 3. 结果总览
+  const summary = `
+算式判断正确数：${correctExpressionCount} / 4
+词语记忆正确数：${correctWordCount} / 4
+
+详细结果：
+${expressionsFeedback}
+${wordsFeedback}
+  `;
+  resultDiv.innerHTML = summary;
+}
+
+/* ==================== 模式2蒙版的显示与隐藏 + 清理 ==================== */
+function clearMode2() {
+  document.getElementById('expressionsContainer').innerHTML = "";
+  document.getElementById('wordsContainer').innerHTML = "";
+  document.getElementById('expressionsCheckContainer').innerHTML = "";
+  document.getElementById('inputWordsContainer').innerHTML = "";
+  document.getElementById('mode2Result').textContent = "";
+  expressions = [];
+  words = [];
+}
+</script>
+</body>
+</html>
