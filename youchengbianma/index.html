@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游程编码</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f7fc;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none; /* 防止选中文本 */
+        }
+        h1 {
+            text-align: center;
+            color: #0066cc;
+            margin-bottom: 20px;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            gap: 30px;
+            flex-wrap: wrap;
+            max-width: 1200px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(10, 50px);
+            grid-gap: 2px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        .grid-item {
+            width: 50px;
+            height: 50px;
+            background-color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .grid-item.selected {
+            background-color: #4caf50;
+            color: white;
+        }
+        .grid-item.deselected {
+            background-color: #f44336;
+            color: white;
+        }
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .controls button {
+            padding: 10px 20px;
+            margin: 10px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s ease;
+        }
+        .controls button:hover {
+            background-color: #005bb5;
+        }
+        .slider-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .slider {
+            width: 300px;
+        }
+        .output {
+            font-size: 16px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        textarea {
+            font-size: 16px;
+            width: 300px;
+            height: 80px;
+            margin-top: 10px;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .output p {
+            font-size: 18px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>游程编码体验工具</h1>
+
+    <div class="controls">
+        <button id="encodeBtn">游程编码</button>
+        <button id="resetBtn">重置</button>
+    </div>
+
+    <div class="container">
+        <div class="grid-container" id="gridContainer"></div>
+
+        <div>
+            <div class="output">
+                <h3>游程编码：</h3>
+                <p id="runLengthEncoding">请选择格子并点击“游程编码”按钮。</p>
+            </div>
+
+            <div class="output">
+                <h3>输入游程编码来还原方阵：</h3>
+                <textarea id="encodedInput" placeholder="格式：30A 70B"></textarea><br>
+                <button id="startDecodeBtn">开始还原</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="slider-container">
+        <label for="speedSlider">还原速度：</label>
+        <input type="range" id="speedSlider" class="slider" min="1" max="100" value="50">
+        <span id="speedValue">50</span> ms
+    </div>
+
+    <script>
+        const gridSize = 10;
+        let grid = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+        let encoding = [];
+        let mode = 'encode'; // Default mode: encode
+
+        const gridContainer = document.getElementById('gridContainer');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        const encodedInput = document.getElementById('encodedInput');
+        const runLengthEncodingOutput = document.getElementById('runLengthEncoding');
+
+        let isMouseDown = false; // Track mouse down state
+
+        // 创建方阵
+        function createGrid() {
+            gridContainer.innerHTML = ''; // 清空方阵内容
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('grid-item');
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.textContent = grid[i][j];
+                    cell.addEventListener('mousedown', () => {
+                        isMouseDown = true;
+                        toggleSelection(cell, i, j);
+                    });
+                    cell.addEventListener('mouseover', () => {
+                        if (isMouseDown) {
+                            toggleSelection(cell, i, j);
+                        }
+                    });
+                    cell.addEventListener('mouseup', () => {
+                        isMouseDown = false;
+                    });
+                    gridContainer.appendChild(cell);
+                }
+            }
+        }
+
+        // 切换格子选中状态
+        function toggleSelection(cell, row, col) {
+            if (grid[row][col] === 0) {
+                grid[row][col] = 1;
+                cell.classList.add('selected');
+            } else {
+                grid[row][col] = 0;
+                cell.classList.remove('selected');
+            }
+            cell.textContent = grid[row][col];
+        }
+
+        // 游程编码
+        function runLengthEncoding() {
+            encoding = [];
+            let count = 1;  // 初始计数为1
+            // 将二维数组展平成一维数组
+            let flatGrid = grid.flat();
+            
+            // 遍历展平后的数组
+            for (let i = 0; i < flatGrid.length; i++) {
+                const current = flatGrid[i];
+                const next = flatGrid[i + 1];
+
+                // 如果当前元素和下一个元素相同，则增加计数
+                if (current === next) {
+                    count++;
+                } else {
+                    // 当前元素和下一个元素不同，输出游程
+                    encoding.push(`${count}${current === 1 ? 'A' : 'B'}`);
+                    count = 1;  // 重置计数器
+                }
+            }
+            runLengthEncodingOutput.textContent = encoding.join(' ');
+        }
+
+        // 重置方格
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            grid = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+            createGrid();
+            runLengthEncodingOutput.textContent = '请选择格子并点击“游程编码”按钮。';
+            encodedInput.value = '';
+        });
+
+        // 还原过程
+        function startDecoding() {
+            const encoded = encodedInput.value.trim();
+            const encodingArray = encoded.split(' ');
+            let decodeGrid = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+
+            let row = 0, col = 0;
+            let speed = parseInt(speedSlider.value);
+            speedValue.textContent = speed;
+
+            // 清空方格并将底色改为白色
+            gridContainer.querySelectorAll('.grid-item').forEach(cell => {
+                cell.textContent = '';
+                cell.style.backgroundColor = 'white';
+            });
+
+            let index = 0;
+
+            function decodeStep() {
+                if (index >= encodingArray.length) return;
+                const [count, type] = encodingArray[index].match(/(\d+)([A-B])/).slice(1);
+                const value = type === 'A' ? 1 : 0;
+
+                // 先填充指定数量的1或0
+                for (let i = 0; i < count; i++) {
+                    decodeGrid[row][col] = value;
+                    const cell = gridContainer.children[row * gridSize + col];
+                    setTimeout(() => {
+                        cell.textContent = value;
+                        cell.style.backgroundColor = value === 1 ? '#4caf50' : 'white';
+                    }, i * speed);
+                    col++;
+                    if (col >= gridSize) {
+                        col = 0;
+                        row++;
+                    }
+                }
+
+                index++;
+                setTimeout(decodeStep, speed);
+            }
+
+            decodeStep();
+        }
+
+        // 游程编码按钮
+        document.getElementById('encodeBtn').addEventListener('click', () => {
+            mode = 'encode';
+            createGrid();
+            runLengthEncoding();
+            encodedInput.style.display = 'block';
+            document.getElementById('startDecodeBtn').style.display = 'block';
+        });
+
+        // 开始还原按钮
+        document.getElementById('startDecodeBtn').addEventListener('click', startDecoding);
+
+        // 初始化
+        createGrid();
+    </script>
+</body>
+</html>
