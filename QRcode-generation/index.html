@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>二维码编码演示与生成工具</title>
+  <style>
+    /* 全局样式 */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #f0f0f0;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 20px 30px 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    /* 标签页按钮 */
+    .tab-buttons {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .tab-buttons button {
+      padding: 10px 20px;
+      margin: 0 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      background: #3498db;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .tab-buttons button.active,
+    .tab-buttons button:hover {
+      background: #2980b9;
+    }
+    /* 两个模式内容 */
+    .section { display: none; }
+    .section.active { display: block; }
+    h1 { text-align: center; margin-bottom: 20px; color: #2c3e50; }
+    .controls { text-align: center; margin-bottom: 20px; }
+    .controls input[type="text"] {
+      width: 300px;
+      padding: 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .controls button {
+      padding: 8px 16px;
+      margin: 0 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      background: #3498db;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .controls button:hover:not(:disabled) {
+      background: #2980b9;
+    }
+    .controls button:disabled { background: #ccc; cursor: not-allowed; }
+    /* 演示模式网格 */
+    #gridContainer {
+      margin: 20px auto;
+      display: grid;
+      gap: 2px;
+      /* gridTemplateColumns 动态设置 */
+    }
+    .cell {
+      width: 30px;
+      height: 30px;
+      background: #fff;
+      border: 1px solid #ddd;
+      text-align: center;
+      line-height: 30px;
+      font-size: 14px;
+    }
+    .cell.filled-1 { background: #000; color: #fff; }
+    .cell.filled-0 { background: #fff; }
+    #binaryOutput {
+      margin-top: 20px;
+      font-size: 16px;
+      text-align: center;
+      color: #34495e;
+      word-break: break-all;
+    }
+    /* 真实二维码模式网格（使用较小的单元格） */
+    #realGridContainer {
+      margin: 20px auto;
+      display: grid;
+      gap: 1px;
+      /* gridTemplateColumns 动态设置 */
+    }
+    .qr-cell {
+      width: 20px;
+      height: 20px;
+      background: #eee;
+    }
+    /* 高亮样式 */
+    .data-highlight { outline: 2px solid blue; }
+    .ec-highlight   { outline: 2px solid red; }
+    .footer { text-align: center; margin-top: 20px; font-size: 14px; color: #777; }
+    /* 算法选择样式 */
+    .algorithm-select {
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    .algorithm-select label {
+      margin: 0 5px;
+    }
+  </style>
+  <!-- 引入 qrcode-generator 库，用于真实二维码生成 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- 标签页按钮 -->
+    <div class="tab-buttons">
+      <button id="demoModeBtn" class="active">演示模式</button>
+      <button id="realModeBtn">真实二维码模式</button>
+    </div>
+    <!-- 演示模式：文本 → ASCII 二进制 → 填充方阵 -->
+    <div id="demoSection" class="section active">
+      <h1>二维码编码原理演示工具（演示模式）</h1>
+      <div class="controls">
+        <input type="text" id="inputText" placeholder="请输入文本，例如：HELLO">
+        <br>
+        <button id="startBtn">开始编码</button>
+        <button id="stepBtn" disabled>下一步</button>
+        <button id="playBtn" disabled>自动播放</button>
+        <button id="resetBtn" disabled>重置</button>
+      </div>
+      <div id="gridContainer"></div>
+      <div id="binaryOutput"></div>
+      <div class="footer">
+        <p>&copy; 2025 二维码编码演示</p>
+      </div>
+    </div>
+    <!-- 真实二维码模式：生成真正可扫描的二维码 -->
+    <div id="realSection" class="section">
+      <h1>真实二维码生成演示</h1>
+      <div class="controls">
+        <input type="text" id="realInputText" placeholder="请输入文本，例如：HELLO">
+        <br>
+        <button id="generateQRBtn">生成二维码</button>
+        <button id="realStepBtn" disabled>下一步</button>
+        <button id="realPlayBtn" disabled>自动播放</button>
+        <button id="realResetBtn" disabled>重置</button>
+        <br><br>
+        <label for="speedSlider">播放速度 (ms): </label>
+        <input type="range" id="speedSlider" min="50" max="1000" value="200">
+        <span id="speedValue">200</span> ms
+        <br><br>
+        <div class="algorithm-select">
+          <label>选择保护区域算法:</label>
+          <input type="radio" name="algorithm" id="algStandard" value="standard" checked>
+          <label for="algStandard">标准算法</label>
+          <input type="radio" name="algorithm" id="algCustom" value="custom">
+          <label for="algCustom">自定义算法（保护区域更小）</label>
+        </div>
+        <br>
+        <button id="highlightDataBtn" disabled>高亮数据区域</button>
+        <button id="highlightECBtn" disabled>高亮保护区域</button>
+      </div>
+      <div id="realGridContainer"></div>
+      <div id="realInfo"></div>
+    </div>
+  </div>
+
+  <script>
+    /********************** 标签页切换 **********************/
+    const demoModeBtn = document.getElementById('demoModeBtn');
+    const realModeBtn = document.getElementById('realModeBtn');
+    const demoSection = document.getElementById('demoSection');
+    const realSection = document.getElementById('realSection');
+
+    demoModeBtn.addEventListener('click', () => {
+      demoModeBtn.classList.add('active');
+      realModeBtn.classList.remove('active');
+      demoSection.classList.add('active');
+      realSection.classList.remove('active');
+    });
+    realModeBtn.addEventListener('click', () => {
+      realModeBtn.classList.add('active');
+      demoModeBtn.classList.remove('active');
+      realSection.classList.add('active');
+      demoSection.classList.remove('active');
+    });
+
+    /********************** 演示模式代码 **********************/
+    let binaryString = "";
+    let gridSize = 0;
+    let currentStep = 0;
+    let intervalId = null;
+
+    const inputText = document.getElementById("inputText");
+    const startBtn = document.getElementById("startBtn");
+    const stepBtn = document.getElementById("stepBtn");
+    const playBtn = document.getElementById("playBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const gridContainer = document.getElementById("gridContainer");
+    const binaryOutput = document.getElementById("binaryOutput");
+
+    startBtn.addEventListener("click", startEncoding);
+    stepBtn.addEventListener("click", fillNextStep);
+    playBtn.addEventListener("click", togglePlay);
+    resetBtn.addEventListener("click", resetEncoding);
+
+    function startEncoding() {
+      const text = inputText.value;
+      if (!text) {
+        alert("请输入一些文本！");
+        return;
+      }
+      // 将文本转为 ASCII 二进制（每个字符8位）
+      binaryString = "";
+      for (let i = 0; i < text.length; i++) {
+        let bin = text.charCodeAt(i).toString(2).padStart(8, '0');
+        binaryString += bin;
+      }
+      binaryOutput.textContent = "ASCII 二进制数据： " + binaryString;
+      // 根据二进制长度确定正方形边长
+      gridSize = Math.ceil(Math.sqrt(binaryString.length));
+      createGrid(gridSize);
+      stepBtn.disabled = false;
+      playBtn.disabled = false;
+      resetBtn.disabled = false;
+      startBtn.disabled = true;
+      inputText.disabled = true;
+    }
+
+    function createGrid(size) {
+      gridContainer.innerHTML = "";
+      gridContainer.style.gridTemplateColumns = `repeat(${size}, 30px)`;
+      gridContainer.style.width = `${size * 30 + (size - 1) * 2}px`;
+      for (let i = 0; i < size * size; i++) {
+        const cell = document.createElement("div");
+        cell.classList.add("cell");
+        cell.dataset.index = i;
+        gridContainer.appendChild(cell);
+      }
+    }
+
+    function fillNextStep() {
+      if (currentStep >= gridSize * gridSize) {
+        stopAutoPlay();
+        return;
+      }
+      const cell = gridContainer.querySelector(`.cell[data-index='${currentStep}']`);
+      let bit = "0";
+      if (currentStep < binaryString.length) {
+        bit = binaryString[currentStep];
+      }
+      cell.classList.add(bit === "1" ? "filled-1" : "filled-0");
+      cell.textContent = bit;
+      currentStep++;
+      if (currentStep >= gridSize * gridSize) {
+        stopAutoPlay();
+        stepBtn.disabled = true;
+        playBtn.disabled = true;
+      }
+    }
+
+    function togglePlay() {
+      if (intervalId) {
+        stopAutoPlay();
+      } else {
+        intervalId = setInterval(() => {
+          fillNextStep();
+          if (currentStep >= gridSize * gridSize) {
+            stopAutoPlay();
+          }
+        }, 300);
+        playBtn.textContent = "暂停播放";
+        stepBtn.disabled = true;
+      }
+    }
+
+    function stopAutoPlay() {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+        playBtn.textContent = "自动播放";
+        if (currentStep < gridSize * gridSize) {
+          stepBtn.disabled = false;
+        }
+      }
+    }
+
+    function resetEncoding() {
+      stopAutoPlay();
+      currentStep = 0;
+      binaryString = "";
+      gridSize = 0;
+      gridContainer.innerHTML = "";
+      binaryOutput.textContent = "";
+      startBtn.disabled = false;
+      stepBtn.disabled = true;
+      playBtn.disabled = true;
+      resetBtn.disabled = true;
+      inputText.disabled = false;
+      inputText.value = "";
+    }
+
+    /********************** 真实二维码模式代码 **********************/
+    let qrMatrix = [];         // 二维码矩阵（true：黑，false：白）
+    let realGridSize = 0;
+    let realNonStaticCells = []; // 非静态模块坐标数组
+    let realCurrentStep = 0;
+    let realIntervalId = null;
+    // 高亮用（仅对版本1有效）—标准算法默认数据区域 152，纠错区域 56；
+    // 自定义算法数据区域 180，纠错区域 28（总共 208 位）
+    let dataBitsCount = 152;
+    let ecBitsCount = 56;
+    let realDataOrder = [];    // 数据填充顺序（仅模拟版本1时使用）
+    let dataHighlighted = false;
+    let ecHighlighted = false;
+
+    const realInputText = document.getElementById('realInputText');
+    const generateQRBtn = document.getElementById('generateQRBtn');
+    const realStepBtn = document.getElementById('realStepBtn');
+    const realPlayBtn = document.getElementById('realPlayBtn');
+    const realResetBtn = document.getElementById('realResetBtn');
+    const realGridContainer = document.getElementById('realGridContainer');
+    const realInfo = document.getElementById('realInfo');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+    const highlightDataBtn = document.getElementById('highlightDataBtn');
+    const highlightECBtn = document.getElementById('highlightECBtn');
+
+    generateQRBtn.addEventListener('click', generateQR);
+    realStepBtn.addEventListener('click', fillNextRealCell);
+    realPlayBtn.addEventListener('click', toggleRealPlay);
+    realResetBtn.addEventListener('click', resetRealQR);
+    speedSlider.addEventListener('input', function() {
+      speedValue.textContent = speedSlider.value;
+    });
+    highlightDataBtn.addEventListener('click', toggleHighlightData);
+    highlightECBtn.addEventListener('click', toggleHighlightEC);
+
+    // 生成二维码：使用自动选版（typeNumber=0），这样输入内容多时二维码版本会增大
+    function generateQR() {
+      const text = realInputText.value;
+      if (!text) {
+        alert("请输入文本！");
+        return;
+      }
+      // 使用自动选版：typeNumber=0 表示自动选择最小版本
+      let qr = qrcode(0, 'L');
+      qr.addData(text);
+      qr.make();
+      realGridSize = qr.getModuleCount();
+      // 构造二维码矩阵
+      qrMatrix = [];
+      for (let r = 0; r < realGridSize; r++) {
+        qrMatrix[r] = [];
+        for (let c = 0; c < realGridSize; c++) {
+          qrMatrix[r][c] = qr.isDark(r, c);
+        }
+      }
+      realInfo.textContent = `QR码大小： ${realGridSize} x ${realGridSize}`;
+      createRealGrid(realGridSize);
+
+      // 只有当生成的二维码为版本1（21×21）时，才启用高亮功能及算法选择
+      if (realGridSize !== 21) {
+        highlightDataBtn.disabled = true;
+        highlightECBtn.disabled = true;
+        realInfo.textContent += " （高亮功能及算法选择仅限版本1模拟）";
+      } else {
+        highlightDataBtn.disabled = false;
+        highlightECBtn.disabled = false;
+        // 根据算法选择设置数据区域与保护区域大小
+        const alg = document.querySelector('input[name="algorithm"]:checked').value;
+        if (alg === "standard") {
+          dataBitsCount = 152;
+          ecBitsCount = 56;
+        } else if (alg === "custom") {
+          dataBitsCount = 180;
+          ecBitsCount = 208 - 180;  // 28
+        }
+        // 计算数据填充顺序（此处仅做简单模拟，适用于版本1）
+        realDataOrder = getDataPlacementOrder(realGridSize);
+      }
+
+      // 筛选非静态区域（简单筛选：排除定位块、定时图案及部分格式信息区域）
+      realNonStaticCells = [];
+      for (let r = 0; r < realGridSize; r++) {
+        for (let c = 0; c < realGridSize; c++) {
+          if (!isStaticCell(r, c, realGridSize)) {
+            realNonStaticCells.push({r, c});
+          }
+        }
+      }
+      // 绘制静态模块（定位块、定时图案、格式信息区域）
+      drawStaticCells();
+
+      realStepBtn.disabled = false;
+      realPlayBtn.disabled = false;
+      realResetBtn.disabled = false;
+      generateQRBtn.disabled = true;
+      realInputText.disabled = true;
+    }
+
+    function createRealGrid(size) {
+      realGridContainer.innerHTML = "";
+      realGridContainer.style.gridTemplateColumns = `repeat(${size}, 20px)`;
+      realGridContainer.style.width = `${size * 20 + (size - 1) * 1}px`;
+      for (let i = 0; i < size * size; i++) {
+        let cell = document.createElement("div");
+        cell.classList.add("qr-cell");
+        cell.dataset.index = i;
+        realGridContainer.appendChild(cell);
+      }
+    }
+
+    // 判断是否为静态模块（定位块、定时图案、格式信息区域）—此处仍采用版本1的固定判断
+    function isStaticCell(r, c, size) {
+      // 定位块：左上、右上、左下（7×7）
+      if (r < 7 && c < 7) return true;
+      if (r < 7 && c >= size - 7) return true;
+      if (r >= size - 7 && c < 7) return true;
+      // 定时图案：第7行与第7列（排除定位块区域）
+      if (r === 6 && c >= 8 && c < size - 8) return true;
+      if (c === 6 && r >= 8 && r < size - 8) return true;
+      // 格式信息：简单处理，标记 (8,0)~(8,8) 及 (0,8)~(8,8)
+      if (r === 8 && c <= 8) return true;
+      if (c === 8 && r <= 8) return true;
+      return false;
+    }
+
+    // 绘制静态模块
+    function drawStaticCells() {
+      for (let r = 0; r < realGridSize; r++) {
+        for (let c = 0; c < realGridSize; c++) {
+          if (isStaticCell(r, c, realGridSize)) {
+            drawRealCell(r, c, qrMatrix[r][c]);
+          }
+        }
+      }
+    }
+
+    // 绘制单个单元格（r, c）
+    function drawRealCell(r, c, value) {
+      const index = r * realGridSize + c;
+      const cell = realGridContainer.querySelector(`div[data-index='${index}']`);
+      cell.style.background = value ? "#000" : "#fff";
+    }
+
+    // 逐步填充下一个非静态单元格（按简单顺序）
+    function fillNextRealCell() {
+      if (realCurrentStep >= realNonStaticCells.length) {
+        stopRealAutoPlay();
+        return;
+      }
+      const {r, c} = realNonStaticCells[realCurrentStep];
+      drawRealCell(r, c, qrMatrix[r][c]);
+      realCurrentStep++;
+      if (realCurrentStep >= realNonStaticCells.length) {
+        stopRealAutoPlay();
+        realStepBtn.disabled = true;
+        realPlayBtn.disabled = true;
+      }
+    }
+
+    // 自动播放：播放间隔根据速度滑动条调节
+    function toggleRealPlay() {
+      if (realIntervalId) {
+        stopRealAutoPlay();
+      } else {
+        const speed = parseInt(speedSlider.value);
+        realIntervalId = setInterval(() => {
+          fillNextRealCell();
+          if (realCurrentStep >= realNonStaticCells.length) {
+            stopRealAutoPlay();
+          }
+        }, speed);
+        realPlayBtn.textContent = "暂停播放";
+        realStepBtn.disabled = true;
+      }
+    }
+
+    function stopRealAutoPlay() {
+      if (realIntervalId) {
+        clearInterval(realIntervalId);
+        realIntervalId = null;
+        realPlayBtn.textContent = "自动播放";
+        if (realCurrentStep < realNonStaticCells.length) {
+          realStepBtn.disabled = false;
+        }
+      }
+    }
+
+    function resetRealQR() {
+      stopRealAutoPlay();
+      realCurrentStep = 0;
+      qrMatrix = [];
+      realNonStaticCells = [];
+      realGridSize = 0;
+      realDataOrder = [];
+      realGridContainer.innerHTML = "";
+      realInfo.textContent = "";
+      generateQRBtn.disabled = false;
+      realStepBtn.disabled = true;
+      realPlayBtn.disabled = true;
+      realResetBtn.disabled = true;
+      realInputText.disabled = false;
+      realInputText.value = "";
+      highlightDataBtn.disabled = true;
+      highlightECBtn.disabled = true;
+      dataHighlighted = false;
+      ecHighlighted = false;
+    }
+
+    /********* 计算数据填充顺序（仅适用于版本1，简单模拟） *********/
+    function getDataPlacementOrder(size) {
+      let order = [];
+      let col = size - 1;
+      let upward = true;
+      while (col > 0) {
+        if (col === 6) col--; // 跳过定时图案列
+        if (upward) {
+          for (let row = size - 1; row >= 0; row--) {
+            for (let i = 0; i < 2; i++) {
+              let c = col - i;
+              if (!isStaticCell(row, c, size)) {
+                order.push({r: row, c: c});
+              }
+            }
+          }
+        } else {
+          for (let row = 0; row < size; row++) {
+            for (let i = 0; i < 2; i++) {
+              let c = col - i;
+              if (!isStaticCell(row, c, size)) {
+                order.push({r: row, c: c});
+              }
+            }
+          }
+        }
+        col -= 2;
+        upward = !upward;
+      }
+      return order;
+    }
+
+    /********* 高亮显示数据区域与保护区域 *********/
+    function toggleHighlightData() {
+      if (!realDataOrder || realDataOrder.length === 0) return;
+      // 数据区域：取 realDataOrder 数组中前 dataBitsCount 个坐标
+      for (let i = 0; i < Math.min(dataBitsCount, realDataOrder.length); i++) {
+        const {r, c} = realDataOrder[i];
+        const index = r * realGridSize + c;
+        const cell = realGridContainer.querySelector(`div[data-index='${index}']`);
+        if (!dataHighlighted) {
+          cell.classList.add("data-highlight");
+        } else {
+          cell.classList.remove("data-highlight");
+        }
+      }
+      dataHighlighted = !dataHighlighted;
+      highlightDataBtn.textContent = dataHighlighted ? "取消高亮数据区域" : "高亮数据区域";
+    }
+
+    function toggleHighlightEC() {
+      if (!realDataOrder || realDataOrder.length === 0) return;
+      // 保护区域：从 realDataOrder 数组中第 dataBitsCount 个开始
+      for (let i = dataBitsCount; i < realDataOrder.length; i++) {
+        const {r, c} = realDataOrder[i];
+        const index = r * realGridSize + c;
+        const cell = realGridContainer.querySelector(`div[data-index='${index}']`);
+        if (!ecHighlighted) {
+          cell.classList.add("ec-highlight");
+        } else {
+          cell.classList.remove("ec-highlight");
+        }
+      }
+      ecHighlighted = !ecHighlighted;
+      highlightECBtn.textContent = ecHighlighted ? "取消高亮保护区域" : "高亮保护区域";
+    }
+  </script>
+</body>
+</html>
