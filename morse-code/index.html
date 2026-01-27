@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>摩斯电码演示工具</title>
+  <style>
+    /* 整体页面样式 */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 0;
+    }
+    /* 外层容器全宽 */
+    .container {
+      width: 100%;
+      margin: 0;
+      padding: 20px;
+      background: #fff;
+      /* 增加轻微阴影与圆角以美化 */
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    textarea {
+      width: 100%;
+      height: 80px;
+      font-size: 16px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #morseDisplay {
+      margin-top: 20px;
+      font-size: 20px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      word-wrap: break-word;
+      box-sizing: border-box;
+    }
+    /* 闪烁区域：宽度与外层容器一致，自适应 */
+    #flashBox {
+      margin: 20px auto;
+      width: 100%;
+      /* 不再限制最大宽度 */
+      height: 50px;
+      background-color: #000;
+      border: 2px solid #333;
+      box-sizing: border-box;
+    }
+    /* 查询区域：宽度设置为100%，不超过外层容器 */
+    #lookupContainer {
+      margin-top: 20px;
+      border: 1px solid #aaa;
+      padding: 10px;
+      width: 100%;
+      box-sizing: border-box;
+      background-color: #fafafa;
+      max-height: 80vh;
+      overflow: auto;
+      border-radius: 4px;
+    }
+    .treeNode {
+      position: absolute;
+      text-align: center;
+      border: 1px solid #666;
+      border-radius: 50%;
+      background-color: #eee;
+      line-height: normal;
+      overflow: hidden;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    table, th, td {
+      border: 1px solid #666;
+    }
+    th, td {
+      padding: 5px 8px;
+      text-align: center;
+    }
+    label {
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    input[type="range"] {
+      vertical-align: middle;
+      margin: 0 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>摩斯电码演示工具</h1>
+    <textarea id="inputText" placeholder="请输入文本"></textarea>
+    <br>
+    <button id="encryptButton">加密</button>
+    <button id="playButton">播放</button>
+    <button id="pauseButton" disabled>暂停</button>
+    <br>
+    <label for="speedControl">播放速度 (0.125×～8×):</label>
+    <input type="range" id="speedControl" min="0.125" max="8" step="0.125" value="1">
+    <span id="speedValue">1×</span>
+    <br>
+    <div id="morseDisplay"></div>
+    <div id="flashBox"></div>
+    <br>
+    <button id="toggleLookupButton">显示摩斯密码查询表</button>
+    <!-- 查询区域设置为宽度100%，不超出外层容器 -->
+    <div id="lookupContainer" style="display:none;">
+      <!-- 仅保留树状图模式选项 -->
+      <label><input type="checkbox" id="treeModeCheckbox"> 树状图模式</label>
+      <!-- 树状图缩放控制 -->
+      <label style="margin-left:20px;">树状图缩放:
+        <input type="range" id="treeZoomControl" min="0.5" max="2" step="0.1" value="1">
+        <span id="treeZoomValue">1×</span>
+      </label>
+      <div id="lookupContent"></div>
+    </div>
+  </div>
+  
+  <script>
+    // ─────────────────────────────
+    // 摩斯电码映射表（空格用 "/" 表示单词间隔）
+    const morseCode = {
+      'A': '.-',    'B': '-...',  'C': '-.-.',  'D': '-..',
+      'E': '.',     'F': '..-.',  'G': '--.',   'H': '....',
+      'I': '..',    'J': '.---',  'K': '-.-',   'L': '.-..',
+      'M': '--',    'N': '-.',    'O': '---',   'P': '.--.',
+      'Q': '--.-',  'R': '.-.',   'S': '...',   'T': '-',
+      'U': '..-',   'V': '...-',  'W': '.--',   'X': '-..-',
+      'Y': '-.--',  'Z': '--..',
+      '0': '-----', '1': '.----', '2': '..---', '3': '...--',
+      '4': '....-', '5': '.....', '6': '-....', '7': '--...',
+      '8': '---..', '9': '----.',
+      '.': '.-.-.-', ',': '--..--', '?': '..--..',  '\'': '.----.',
+      '!': '-.-.--', '/': '-..-.',  '(': '-.--.',   ')': '-.--.-',
+      '&': '.-...',  ':': '---...', ';': '-.-.-.',  '=': '-...-',
+      '+': '.-.-.',  '-': '-....-', '_': '..--.-',  '"': '.-..-.',
+      '$': '...-..-','@': '.--.-.',
+      ' ': '/'  
+    };
+
+    // ─────────────────────────────
+    // 基本时间单位（毫秒）
+    const unit = 200;
+    const dotTime = unit;
+    const dashTime = unit * 3;
+    // 修改字母间隔为4个单位，便于初学者区分
+    const intraCharGap = unit;
+    const letterGap = unit * 6;
+    const wordGap = unit * 9;
+
+    // ─────────────────────────────
+    // 加密函数：将文本转换为摩斯电码字符串
+    function textToMorse(text) {
+      return text.toUpperCase().split('').map(function(char) {
+        if (char === ' ') return '/';
+        return morseCode[char] || '';
+      }).join(' ');
+    }
+    function encryptMorse() {
+      const input = document.getElementById('inputText').value;
+      if (!input.trim()) {
+        alert("请输入一些文本！");
+        return;
+      }
+      const morseStr = textToMorse(input);
+      document.getElementById('morseDisplay').textContent = morseStr;
+    }
+    document.getElementById('encryptButton').addEventListener('click', encryptMorse);
+
+    // ─────────────────────────────
+    // 播放控制 —— 逐事件调度（支持暂停/继续）
+    var playback = {
+      events: [],
+      index: 0,
+      paused: false,
+      timer: null,
+      currentEventStartTime: 0,
+      currentEventRemaining: 0,
+      currentOscillator: null,
+      audioCtx: null,
+      speedFactor: 1
+    };
+    function getRandomColor() {
+      var letters = '0123456789ABCDEF';
+      var color = '#';
+      for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+    // 构造播放事件序列，每个事件对象 { type:'beep'|'gap', duration: 毫秒, path: (滴答序列，仅beep有效), color: (随机色) }
+    function buildPlaybackEvents(input, speedFactor) {
+      var events = [];
+      const effDotTime = dotTime / speedFactor;
+      const effDashTime = dashTime / speedFactor;
+      const effIntraCharGap = intraCharGap / speedFactor;
+      const effLetterGap = letterGap / speedFactor;
+      const effWordGap = wordGap / speedFactor;
+      const words = input.trim().split(/\s+/);
+      for (var w = 0; w < words.length; w++) {
+        var word = words[w].toUpperCase();
+        for (var i = 0; i < word.length; i++) {
+          const char = word[i];
+          const code = morseCode[char];
+          if (!code) continue;
+          const randomColor = getRandomColor();
+          var currentPath = "";
+          for (var j = 0; j < code.length; j++) {
+            const symbol = code[j];
+            currentPath += symbol;
+            const duration = (symbol === '.') ? effDotTime : effDashTime;
+            events.push({ type: 'beep', duration: duration, path: currentPath, color: randomColor });
+            if (j < code.length - 1) {
+              events.push({ type: 'gap', duration: effIntraCharGap });
+            }
+          }
+          if (i < word.length - 1) {
+            events.push({ type: 'gap', duration: effLetterGap });
+          }
+        }
+        if (w < words.length - 1) {
+          events.push({ type: 'gap', duration: effWordGap });
+        }
+      }
+      return events;
+    }
+    function startPlayback() {
+      const input = document.getElementById('inputText').value;
+      if (!input.trim()) {
+        alert("请输入一些文本！");
+        return;
+      }
+      const speedFactor = parseFloat(document.getElementById('speedControl').value);
+      playback.speedFactor = speedFactor;
+      playback.events = buildPlaybackEvents(input, speedFactor);
+      playback.index = 0;
+      playback.paused = false;
+      playback.timer = null;
+      playback.currentEventRemaining = 0;
+      if (playback.audioCtx) {
+        // 可选择关闭旧的 AudioContext
+      }
+      playback.audioCtx = null;
+      document.getElementById('pauseButton').disabled = false;
+      playNextEvent();
+    }
+    function playNextEvent() {
+      if (playback.index >= playback.events.length) {
+        document.getElementById('pauseButton').disabled = true;
+        return;
+      }
+      const event = playback.events[playback.index];
+      playback.currentEventStartTime = performance.now();
+      if (event.type === 'beep') {
+        playBeep(event);
+      }
+      playback.timer = setTimeout(function() {
+        playback.index++;
+        playNextEvent();
+      }, event.duration);
+    }
+    function playBeep(event) {
+      if (!playback.audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        playback.audioCtx = new AudioContext();
+      }
+      const oscillator = playback.audioCtx.createOscillator();
+      oscillator.frequency.value = 600;
+      oscillator.connect(playback.audioCtx.destination);
+      oscillator.start();
+      setTimeout(function() {
+        oscillator.stop();
+      }, event.duration);
+      playback.currentOscillator = oscillator;
+      
+      const flashBox = document.getElementById('flashBox');
+      flashBox.style.backgroundColor = 'white';
+      setTimeout(function() {
+        flashBox.style.backgroundColor = 'black';
+      }, event.duration);
+      
+      if (document.getElementById('treeModeCheckbox').checked) {
+        const nodeId = getNodeId(event.path);
+        const nodeElem = document.getElementById(nodeId);
+        if (nodeElem) {
+          nodeElem.style.backgroundColor = event.color;
+          setTimeout(function() {
+            nodeElem.style.backgroundColor = '';
+          }, event.duration);
+        }
+      }
+    }
+    function pausePlayback() {
+      if (playback.paused) return;
+      if (playback.timer) {
+        clearTimeout(playback.timer);
+        playback.timer = null;
+      }
+      const now = performance.now();
+      const currentEvent = playback.events[playback.index];
+      const elapsed = now - playback.currentEventStartTime;
+      if (currentEvent.type === 'gap') {
+        playback.currentEventRemaining = currentEvent.duration - elapsed;
+      } else if (currentEvent.type === 'beep') {
+        if (playback.currentOscillator) {
+          playback.currentOscillator.stop();
+          playback.currentOscillator = null;
+        }
+        playback.currentEventRemaining = 0;
+      }
+      playback.paused = true;
+      document.getElementById('pauseButton').textContent = '继续';
+    }
+    function resumePlayback() {
+      if (!playback.paused) return;
+      playback.paused = false;
+      document.getElementById('pauseButton').textContent = '暂停';
+      if (playback.currentEventRemaining > 0) {
+        playback.currentEventStartTime = performance.now();
+        playback.timer = setTimeout(function() {
+          playback.index++;
+          playNextEvent();
+        }, playback.currentEventRemaining);
+      } else {
+        playback.index++;
+        playNextEvent();
+      }
+    }
+    document.getElementById('playButton').addEventListener('click', startPlayback);
+    document.getElementById('pauseButton').addEventListener('click', function() {
+      if (playback.paused) {
+        resumePlayback();
+      } else {
+        pausePlayback();
+      }
+    });
+    document.getElementById('speedControl').addEventListener('input', function () {
+      document.getElementById('speedValue').textContent = this.value + "×";
+    });
+    
+    // ─────────────────────────────
+    // 构造摩斯码树 —— 将除空格外的各字符插入树中
+    var morseTreeRoot = { value: "", dot: null, dash: null, path: "" };
+    function insertIntoTree(root, code, letter) {
+      let current = root;
+      let path = "";
+      for (let i = 0; i < code.length; i++) {
+        const symbol = code[i];
+        path += symbol;
+        if (symbol === '.') {
+          if (!current.dot) { current.dot = { value: "", dot: null, dash: null, path: path }; }
+          current = current.dot;
+        } else if (symbol === '-') {
+          if (!current.dash) { current.dash = { value: "", dot: null, dash: null, path: path }; }
+          current = current.dash;
+        }
+      }
+      current.value = letter;
+    }
+    for (let key in morseCode) {
+      if (key === ' ') continue;
+      insertIntoTree(morseTreeRoot, morseCode[key], key);
+    }
+    
+    // ─────────────────────────────
+    // 辅助函数：将路径字符串转换为节点元素 id
+    function getNodeId(path) {
+      return "node_" + path.replace(/\./g, "dit").replace(/-/g, "dah");
+    }
+    
+    // ─────────────────────────────
+    // 树状图连线显示 —— 利用中序遍历给每个节点分配位置，然后在相对定位容器中用 SVG 连线并放置各节点
+    function renderMorseTreeDiagram() {
+      // 使用中序遍历为每个节点分配位置
+      var xCounter = 0;
+      function assignPositions(node, level) {
+        if (!node) return;
+        assignPositions(node.dot, level + 1);
+        node.level = level;
+        node.x = xCounter++;
+        assignPositions(node.dash, level + 1);
+      }
+      xCounter = 0;
+      assignPositions(morseTreeRoot, 0);
+      
+      // 收集所有节点，计算最小、最大 x 及最大层级
+      var nodes = [];
+      function collectNodes(node) {
+        if (!node) return;
+        nodes.push(node);
+        collectNodes(node.dot);
+        collectNodes(node.dash);
+      }
+      collectNodes(morseTreeRoot);
+      var minX = Infinity, maxX = -Infinity, maxLevel = 0;
+      nodes.forEach(function(node) {
+        if (node.x < minX) minX = node.x;
+        if (node.x > maxX) maxX = node.x;
+        if (node.level > maxLevel) maxLevel = node.level;
+      });
+      nodes.forEach(function(node) {
+        node.adjustedX = node.x - minX;
+      });
+      
+      // 设置间距：为了整体更紧凑，水平间距设为30像素，边距设为10像素
+      var horizontalSpacing = 30;
+      var verticalSpacing = 80;
+      var marginLeft = 10, marginTop = 10;
+      var containerWidth = (maxX - minX + 1) * horizontalSpacing + marginLeft * 2;
+      var containerHeight = (maxLevel + 1) * verticalSpacing + marginTop * 2;
+      // 保证画布宽度至少为浏览器宽度
+      containerWidth = Math.max(containerWidth, window.innerWidth);
+      
+      nodes.forEach(function(node) {
+        node.pixelX = node.adjustedX * horizontalSpacing + marginLeft;
+        node.pixelY = node.level * verticalSpacing + marginTop;
+      });
+      
+      // 收集所有父子连线（从父节点中心到子节点中心）
+      var links = [];
+      function collectLinks(node) {
+        if (!node) return;
+        if (node.dot) {
+          links.push({
+            x1: node.pixelX + 15,
+            y1: node.pixelY + 15,
+            x2: node.dot.pixelX + 15,
+            y2: node.dot.pixelY + 15
+          });
+          collectLinks(node.dot);
+        }
+        if (node.dash) {
+          links.push({
+            x1: node.pixelX + 15,
+            y1: node.pixelY + 15,
+            x2: node.dash.pixelX + 15,
+            y2: node.dash.pixelY + 15
+          });
+          collectLinks(node.dash);
+        }
+      }
+      collectLinks(morseTreeRoot);
+      
+      // 构造 HTML：外层容器（相对定位）、内部 SVG 连线、以及各节点（绝对定位的 div）
+      var html = "<div id='treeDiagramContainer' style='position: relative; width: " + containerWidth + "px; height: " + containerHeight + "px;'>";
+      html += "<svg style='position: absolute; top: 0; left: 0; width: " + containerWidth + "px; height: " + containerHeight + "px; pointer-events: none;'>";
+      links.forEach(function(link) {
+        html += "<line x1='" + link.x1 + "' y1='" + link.y1 + "' x2='" + link.x2 + "' y2='" + link.y2 + "' stroke='black' stroke-width='1'/>";
+      });
+      html += "</svg>";
+      nodes.forEach(function(node) {
+        var nodeWidth = 30;
+        var nodeHeight = 30;
+        var fontSize = "20px";
+        var content = node.value ? "<div style='font-weight:bold;'>" + node.value + "</div>" : "";
+        html += "<div id='" + getNodeId(node.path) + "' class='treeNode' style='left: " + node.pixelX + "px; top: " + node.pixelY + "px; width: " + nodeWidth + "px; height: " + nodeHeight + "px; line-height:" + nodeHeight + "px; font-size:" + fontSize + ";'>";
+        html += content;
+        html += "</div>";
+      });
+      html += "</div>";
+      return html;
+    }
+    
+    // ─────────────────────────────
+    // 查询表部分 —— 列表模式和树状图模式
+    document.getElementById('toggleLookupButton').addEventListener('click', function () {
+      const container = document.getElementById('lookupContainer');
+      if (container.style.display === "none") {
+        container.style.display = "block";
+        this.textContent = "隐藏摩斯密码查询表";
+        updateLookupDisplay();
+      } else {
+        container.style.display = "none";
+        this.textContent = "显示摩斯密码查询表";
+      }
+    });
+    document.getElementById('treeModeCheckbox').addEventListener('change', updateLookupDisplay);
+    function updateLookupDisplay() {
+      const lookupContent = document.getElementById('lookupContent');
+      if (document.getElementById('treeModeCheckbox').checked) {
+        lookupContent.innerHTML = renderMorseTreeDiagram();
+        updateTreeZoom();
+      } else {
+        lookupContent.innerHTML = renderMorseList();
+      }
+    }
+    
+    // 树状图缩放控制：监听缩放滑块变化，调整外层容器 transform
+    document.getElementById('treeZoomControl').addEventListener('input', function(){
+      document.getElementById('treeZoomValue').textContent = this.value + "×";
+      updateTreeZoom();
+    });
+    function updateTreeZoom() {
+      const zoom = document.getElementById('treeZoomControl').value;
+      const container = document.getElementById('treeDiagramContainer');
+      if (container) {
+        container.style.transform = "scale(" + zoom + ")";
+        container.style.transformOrigin = "top left";
+      }
+    }
+    
+    // ─────────────────────────────
+    // 普通查询表（列表模式）：字母和数字分开显示
+    function renderMorseList() {
+      var letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+      var digits = "0123456789".split("");
+      var html = "";
+      
+      html += "<h3>字母</h3>";
+      var cols = 6;
+      html += "<table style='margin:auto; border-collapse: collapse;'>";
+      for (var i = 0; i < letters.length; i++) {
+        if (i % cols === 0) {
+          html += "<tr>";
+        }
+        var letter = letters[i];
+        var code = morseCode[letter] || "";
+        html += "<td style='border: 1px solid #666; padding: 5px; text-align: center;'>" +
+                "<strong>" + letter + "</strong><br/>" + code + "</td>";
+        if (i % cols === cols - 1) {
+          html += "</tr>";
+        }
+      }
+      if (letters.length % cols !== 0) {
+        html += "</tr>";
+      }
+      html += "</table>";
+      
+      html += "<h3>数字</h3>";
+      cols = 5;
+      html += "<table style='margin:auto; border-collapse: collapse;'>";
+      for (var j = 0; j < digits.length; j++) {
+        if (j % cols === 0) {
+          html += "<tr>";
+        }
+        var digit = digits[j];
+        var code2 = morseCode[digit] || "";
+        html += "<td style='border: 1px solid #666; padding: 5px; text-align: center;'>" +
+                "<strong>" + digit + "</strong><br/>" + code2 + "</td>";
+        if (j % cols === cols - 1) {
+          html += "</tr>";
+        }
+      }
+      if (digits.length % cols !== 0) {
+        html += "</tr>";
+      }
+      html += "</table>";
+      
+      return html;
+    }
+  </script>
+</body>
+</html>
