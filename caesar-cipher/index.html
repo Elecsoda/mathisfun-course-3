@@ -2,159 +2,147 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 核心适配：设置移动端视口 -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>凯撒密码工具</title>
     <style>
-        /* ================= 基础样式适配 ================= */
+        /* 基础样式 */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f7fa;
             color: #333;
             margin: 0;
             padding: 0;
-            -webkit-tap-highlight-color: transparent;
         }
 
+        /* 容器样式 */
         .container {
-            max-width: 100%; /* 手机端占满宽度 */
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 15px;
-            box-sizing: border-box;
+            padding: 20px;
         }
 
+        /* 标题样式 */
         h1 {
             text-align: center;
             color: #2c3e50;
-            margin: 20px 0;
-            font-size: 1.5rem;
+            margin-bottom: 30px;
         }
 
         h2 {
             color: #34495e;
-            margin-top: 0;
             margin-bottom: 20px;
             text-align: center;
-            font-size: 1.2rem;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
         }
 
-        /* ================= 卡片式布局 ================= */
+        /* 模式选择按钮（如有需要可保留，这里先注释掉）
+        .mode-selector {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .mode-selector button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .mode-selector button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+        */
+
+        /* 模式内容容器 */
         .mode {
             background-color: white;
-            padding: 20px; /* 增加内边距 */
-            border-radius: 12px; /* 圆角更圆润 */
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            margin-bottom: 25px;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
         }
 
-        /* ================= 表单适配 ================= */
-        /* 手机端默认竖向排列，标签在输入框上方 */
+        /* 为了避免父div影响子元素滚动，不再默认使用 display:flex; 居中所有.
+           只保留 margin-bottom: 20px; 等基础样式 */
+        .mode div {
+            margin-bottom: 20px;
+        }
+
+        /* 如果某行需要水平排列并居中，可以加这个类 .form-row */
         .form-row {
             display: flex;
-            flex-direction: column; 
-            align-items: flex-start;
-            margin-bottom: 15px;
+            align-items: center;
+            justify-content: center;
         }
 
         label {
-            font-size: 15px;
-            margin-bottom: 8px; /* 标签和输入框拉开距离 */
-            margin-right: 0;
-            width: 100%;
-            text-align: left;
-            font-weight: 600;
-            color: #555;
+            font-size: 16px;
+            margin-right: 15px;
+            width: 250px;
+            text-align: right;
         }
 
         input[type="number"],
         input[type="text"] {
-            padding: 12px; /* 增大点击区域 */
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px; /* 16px 防止 iOS 输入框自动放大 */
-            width: 100%;
-            box-sizing: border-box; /* 确保padding包含在宽度内 */
-            background-color: #f9f9f9;
-            -webkit-appearance: none;
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 60%;
+            transition: border-color 0.3s;
         }
 
-        input:focus {
+        input[type="number"]:focus,
+        input[type="text"]:focus {
             border-color: #3498db;
-            background-color: #fff;
             outline: none;
         }
 
-        /* ================= 模式1：字母表适配 ================= */
+        /* 字母表容器：模式1可在这里显示明/密字母表 */
         .alphabet-container {
             display: flex;
             flex-direction: column;
-            align-items: flex-start; /* 左对齐，配合滚动 */
-            
-            /* 关键：允许横向滚动，显示完整26个字母 */
-            overflow-x: auto; 
-            -webkit-overflow-scrolling: touch; /* iOS流畅滚动 */
-            
-            width: 100%;
-            padding-bottom: 10px;
-            background-color: #fafafa;
-            border-radius: 8px;
-            border: 1px solid #eee;
-            padding: 10px;
-            box-sizing: border-box;
+            align-items: center;
+            overflow-x: auto; /* 如需横向滚动 */
         }
-
         .alphabet-row {
             display: flex;
-            /* width: max-content; 确保内容撑开宽度，不换行 */
-            width: max-content; 
+            justify-content: center;
             margin: 5px 0;
         }
-
         .alphabet-row div {
-            width: 34px;
-            height: 34px;
+            width: 35px;
+            height: 35px;
             text-align: center;
-            line-height: 34px;
+            line-height: 35px;
             margin: 2px;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            background-color: #fff;
-            font-size: 14px;
-            flex-shrink: 0; /* 防止被压缩 */
-            transition: background-color 0.2s;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #ecf0f1;
+            transition: background-color 0.3s;
         }
-
-        /* 结果区域 */
-        .result {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #e8f4fc;
-            color: #2c3e50;
-            border-radius: 8px;
-            font-size: 16px;
-            text-align: center;
+        .alphabet-row div.highlight {
+            color: white;
             font-weight: bold;
-            word-break: break-all;
         }
 
-        /* ================= 模式2：列队适配 ================= */
+        /* 模式2：使用一个wrapper + container来确保可滚动 */
         .columns-wrapper {
+            /* 让整个区域可以根据内容自由横向滚动 */
             width: 100%;
             overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 10px;
-            background-color: #fafafa;
-            border-radius: 8px;
-            border: 1px solid #eee;
-            padding: 10px;
-            box-sizing: border-box;
+            overflow-y: hidden;
         }
-
         .columns-container {
+            /* 用 inline-flex 避免被挤换行，保证所有列在一行内 */
             display: inline-flex;
-            gap: 8px; /* 列间距 */
+            gap: 15px;
+            margin-top: 20px;
+            padding-bottom: 10px;
+            white-space: nowrap;
+            /* 去除任何居中对齐，确保可正常从最左开始 */
             justify-content: flex-start;
             align-items: flex-start;
         }
@@ -163,93 +151,91 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            flex-shrink: 0;
+            flex-shrink: 0; /* 防止列被挤压 */
         }
 
         .column div {
-            width: 32px;
-            height: 32px;
+            width: 35px;
+            height: 35px;
             text-align: center;
-            line-height: 32px;
-            margin: 1px 0;
-            border: 1px solid #ccc; /* 保持原边框 */
+            line-height: 35px;
+            margin: 2px 0;
+            border: 1px solid #ccc;
             border-radius: 4px;
-            background-color: #fff;
-            font-size: 13px;
+            background-color: #ecf0f1;
+            transition: background-color 0.3s;
+        }
+
+        .column div.highlight-cipher {
+            background-color: #e67e22;
+            color: white;
+            font-weight: bold;
+        }
+
+        .column div.highlight-plain {
+            background-color: #27ae60;
+            color: white;
+            font-weight: bold;
         }
 
         .blank-column {
-            width: 20px;
-            height: 32px;
-            flex-shrink: 0;
+            width: 35px;
+            height: 35px;
+            margin: 2px;
         }
 
-        /* ================= 高亮样式保留 ================= */
-        /* 模式2用到的高亮类 */
-        .highlight-cipher {
-            background-color: #e67e22 !important;
-            color: white;
-            font-weight: bold;
-            border-color: #d35400 !important;
+        /* 结果输出区域 */
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            font-size: 16px;
+            text-align: center;
         }
 
-        .highlight-plain {
-            background-color: #27ae60 !important;
-            color: white;
-            font-weight: bold;
-            border-color: #27ae60 !important;
-            transform: scale(1.05); /* 稍微放大一点点 */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 1;
-        }
-
-        /* ================= 平板/桌面端优化 ================= */
-        /* 当屏幕足够宽时，恢复横向排列 */
-        @media (min-width: 768px) {
-            .container {
-                max-width: 900px;
-            }
-            .form-row {
-                flex-direction: row;
-                align-items: center;
-                justify-content: center;
-            }
+        /* 响应式设计 */
+        @media (max-width: 768px) {
             label {
-                width: 200px;
-                margin-bottom: 0;
-                text-align: right;
-                margin-right: 15px;
+                width: 100%;
+                text-align: left;
+                margin-bottom: 5px;
             }
+
+            /* 移动端让表单竖排 */
+            .form-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
             input[type="number"],
             input[type="text"] {
-                width: 60%;
+                width: 100%;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔐 凯撒密码工具</h1>
+        <h1>凯撒密码工具</h1>
 
         <!-- 模式1 -->
         <div id="mode1" class="mode">
             <h2>模式1 - 已知密钥</h2>
+            <!-- 使用 .form-row 来保证同行居中 -->
             <div class="form-row">
                 <label for="input1">输入明文或密文:</label>
-                <input type="text" id="input1" oninput="updateMode1()" placeholder="请输入...">
+                <input type="text" id="input1" oninput="updateMode1()">
             </div>
             <div class="form-row">
-                <label for="key1">密钥 (负数向前移动):</label>
+                <label for="key1">密钥（负数表示向前移动）:</label>
                 <input type="number" id="key1" value="3" oninput="updateMode1()">
             </div>
-            
-            <!-- 这里可以横向滚动查看所有26个字母 -->
             <div class="alphabet-container">
                 <div class="alphabet-row" id="plaintext-row"></div>
                 <div class="alphabet-row" id="ciphertext-row"></div>
             </div>
-            
-            <div class="result" id="result1">编码结果: </div>
+            <div class="result" id="result1"></div> <!-- 编码结果输出区域 -->
         </div>
 
         <!-- 模式2 -->
@@ -257,26 +243,21 @@
             <h2>模式2 - 未知密钥</h2>
             <div class="form-row">
                 <label for="ciphertext2">输入密文:</label>
-                <input type="text" id="ciphertext2" oninput="updateMode2Columns()" placeholder="例如: KHOOR">
+                <input type="text" id="ciphertext2" oninput="updateMode2Columns()">
             </div>
             <div class="form-row">
-                <label for="key2">输入密钥 (负数向后移动):</label>
+                <label for="key2">输入密钥（负数向后移动）:</label>
                 <input type="number" id="key2" value="0" oninput="updateMode2Highlight()">
             </div>
-            
+            <!-- 外层 wrapper，负责横向滚动 -->
             <div class="columns-wrapper">
-                <div class="columns-container" id="columns-container">
-                    <!-- JS动态生成 -->
-                </div>
+                <!-- 内层 container，横向排布所有列 -->
+                <div class="columns-container" id="columns-container"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // ============================================================
-        // JavaScript 逻辑完全保留原版
-        // ============================================================
-
         // 颜色数组
         const colors = [
             '#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231',
@@ -286,13 +267,8 @@
             '#ffffff', '#000000', '#FF5733', '#33FF57', '#3357FF'
         ];
 
-        // 初始化运行一次，显示默认字母表
-        window.onload = function() {
-            updateMode1();
-        };
-
         // ========================
-        // 模式1 功能 (逻辑恢复原样)
+        // 模式1 功能
         // ========================
         function updateMode1() {
             const key = parseInt(document.getElementById('key1').value) || 0;
@@ -300,10 +276,9 @@
             const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
             const shifted = shiftAlphabet(alphabet, key);
 
-            // 恢复逻辑：上下两行显示的都是标准 A-Z 字母表
-            // 偏移通过高亮不同位置来体现
+            // 更新字母表
             updateAlphabetRow('plaintext-row', alphabet);
-            updateAlphabetRow('ciphertext-row', alphabet); 
+            updateAlphabetRow('ciphertext-row', alphabet);
 
             // 高亮对应字母
             highlightAlphabet(input, alphabet, shifted, 'plaintext-row', 'ciphertext-row', key);
@@ -351,28 +326,21 @@
                 if (plaintextIndex !== -1) {
                     // 有效字母：找出加密后的字母
                     const ciphertextChar = shifted[plaintextIndex];
-                    // 在密文行（显示的是A-Z）中找到加密后字母的位置
                     const ciphertextIndex = alphabet.indexOf(ciphertextChar);
-                    
                     if (ciphertextIndex !== -1) {
                         if (!colorMap[plaintextIndex]) {
                             colorMap[plaintextIndex] = colors[colorIndex % colors.length];
                             colorIndex++;
                         }
                         const color = colorMap[plaintextIndex];
-                        // 逻辑：上行高亮明文位置，下行高亮密文位置（二者会错位，体现偏移）
                         plaintextRow.children[plaintextIndex].style.backgroundColor = color;
                         ciphertextRow.children[ciphertextIndex].style.backgroundColor = color;
-                        
-                        // 增加文字颜色变化，增强对比度
-                        plaintextRow.children[plaintextIndex].style.color = '#fff';
-                        ciphertextRow.children[ciphertextIndex].style.color = '#fff';
                     }
                 } else {
-                    // 非字母字符处理逻辑保留
+                    // 非字母字符，再判断是否可能是大写字母（此处可视需要自行处理）
                     const ciphertextIndex = alphabet.indexOf(char);
                     if (ciphertextIndex !== -1) {
-                        const plaintextIndex = (ciphertextIndex - key + 26) % 26; // 简单反推逻辑
+                        const plaintextIndex = (ciphertextIndex - key + 26) % 26;
                         if (!colorMap[ciphertextIndex]) {
                             colorMap[ciphertextIndex] = colors[colorIndex % colors.length];
                             colorIndex++;
@@ -388,12 +356,11 @@
         function clearHighlights(row) {
             Array.from(row.children).forEach(child => {
                 child.style.backgroundColor = '';
-                child.style.color = '#333'; // 恢复文字颜色
             });
         }
 
         // ========================
-        // 模式2 功能 (逻辑保留原样)
+        // 模式2 功能
         // ========================
         function updateMode2Columns() {
             const ciphertext = document.getElementById('ciphertext2').value.toUpperCase();
@@ -403,10 +370,12 @@
 
             letters.forEach((char) => {
                 if (char === ' ') {
+                    // 空格就生成一个空白格，便于分隔
                     const blankDiv = document.createElement('div');
                     blankDiv.classList.add('blank-column');
                     container.appendChild(blankDiv);
                 } else if (/[A-Z]/.test(char)) {
+                    // 只对A-Z的字母生成对应列
                     const columnDiv = document.createElement('div');
                     columnDiv.classList.add('column');
                     const alphabet = generateColumn(char);
@@ -424,7 +393,7 @@
             // 再根据key高亮对应的“明文字母”
             updateMode2Highlight();
 
-            // 滚动条复位
+            // 保证滚动条一开始在最左
             const wrapper = document.querySelector('.columns-wrapper');
             wrapper.scrollLeft = 0;
         }
@@ -454,8 +423,8 @@
         }
 
         function updateMode2Highlight() {
-            const keyVal = parseInt(document.getElementById('key2').value);
-            const key = (keyVal * (-1)) || 0;
+            // key2: 负数表示向后移动 => 实际明文字母与第8个格（密文字母）之间相差 -key
+            const key = parseInt(document.getElementById('key2').value * (-1)) || 0;
             const columns = document.querySelectorAll('.column');
 
             columns.forEach(column => {
