@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>二进制读心术</title>
+  <style>
+    /* 页面整体 */
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #f6f9fc 0%, #f3f8ff 100%);
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #333;
+    }
+
+    /* 顶部横幅 */
+    header {
+      background: #004f9c;
+      color: #fff;
+      padding: 20px 10px;
+      text-align: center;
+      box-shadow: 0 0 8px rgba(0,0,0,.2);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    header p {
+      margin: 8px 0 0;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    /* 内容主体容器 */
+    .container {
+      max-width: 1200px;
+      margin: 20px auto 60px auto;
+      padding: 0 15px;
+    }
+
+    /* 卡片区域 */
+    .card-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px; /* 卡片之间留出空隙 */
+    }
+
+    /* 单张卡片 */
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      width: 300px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      transition: transform 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+    }
+
+    .card h3 {
+      background: #007bff;
+      margin: 0;
+      padding: 12px;
+      color: #fff;
+      font-size: 16px;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    /* 卡片内表格 */
+    .card table {
+      border-collapse: collapse;
+      margin: 10px auto;
+      width: 95%;
+    }
+    .card table, .card td, .card th {
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    .card td {
+      padding: 6px 8px;
+      font-size: 14px;
+      width: 12%;
+    }
+
+    /* 卡片底部的勾选提示 */
+    .card label {
+      display: block;
+      padding: 10px;
+      text-align: center;
+      font-size: 14px;
+      cursor: pointer;
+      background: #f8f8f8;
+      border-top: 1px solid #ddd;
+    }
+    .card input[type="checkbox"] {
+      margin-right: 6px;
+      transform: scale(1.2);
+      vertical-align: middle;
+    }
+
+    /* 按钮区域 */
+    .controls {
+      text-align: center;
+      margin: 20px auto;
+    }
+    button {
+      cursor: pointer;
+      padding: 10px 16px;
+      margin: 0 10px 10px 0;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: #fff;
+      font-size: 14px;
+      transition: background 0.2s ease;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+
+    /* 结果区域 */
+    #resultArea {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 16px;
+      border-radius: 8px;
+      min-height: 50px;
+      line-height: 1.6;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    }
+    #resultArea p {
+      margin-bottom: 10px;
+    }
+
+    /* 高亮文字 */
+    .highlight {
+      color: #d9534f;
+      font-weight: bold;
+    }
+
+    /* 底部版权或备注 */
+    footer {
+      text-align: center;
+      padding: 10px 0;
+      font-size: 12px;
+      color: #555;
+      opacity: 0.7;
+      background: #f0f0f0;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>二进制读心术</h1>
+  <p>想一个 1～63 的数字，勾选包含它的卡片，然后点击“读心术”！</p>
+</header>
+
+<div class="container">
+  
+  <div class="card-container">
+    <!-- 卡片1：bit0=1 的数字，共32个，按列优先 -->
+    <div class="card">
+      <h3>卡片 1</h3>
+      <table>
+        <tbody>
+          <!-- 按列优先，每列4个数字 -->
+          <tr>
+            <td>1</td><td>9</td><td>17</td><td>25</td><td>33</td><td>41</td><td>49</td><td>57</td>
+          </tr>
+          <tr>
+            <td>3</td><td>11</td><td>19</td><td>27</td><td>35</td><td>43</td><td>51</td><td>59</td>
+          </tr>
+          <tr>
+            <td>5</td><td>13</td><td>21</td><td>29</td><td>37</td><td>45</td><td>53</td><td>61</td>
+          </tr>
+          <tr>
+            <td>7</td><td>15</td><td>23</td><td>31</td><td>39</td><td>47</td><td>55</td><td>63</td>
+          </tr>
+        </tbody>
+      </table>
+      <label>
+        <input type="checkbox" class="cardCheck" data-value="1">
+        在这里面看到你的数字？
+      </label>
+    </div>
+
+    <!-- 卡片2：bit1=2 -->
+    <div class="card">
+      <h3>卡片 2</h3>
+      <table>
+        <tbody>
+          <tr>
+            <td>2</td><td>10</td><td>18</td><td>26</td><td>34</td><td>42</td><td>50</td><td>58</td>
+          </tr>
+          <tr>
+            <td>3</td><td>11</td><td>19</td><td>27</td><td>35</td><td>43</td><td>51</td><td>59</td>
+          </tr>
+          <tr>
+            <td>6</td><td>14</td><td>22</td><td>30</td><td>38</td><td>46</td><td>54</td><td>62</td>
+          </tr>
+          <tr>
+            <td>7</td><td>15</td><td>23</td><td>31</td><td>39</td><td>47</td><td>55</td><td>63</td>
+          </tr>
+        </tbody>
+      </table>
+      <label>
+        <input type="checkbox" class="cardCheck" data-value="2">
+        在这里面看到你的数字？
+      </label>
+    </div>
+
+    <!-- 卡片3：bit2=4 -->
+    <div class="card">
+      <h3>卡片 3</h3>
+      <table>
+        <tbody>
+          <tr>
+            <td>4</td><td>12</td><td>20</td><td>28</td><td>36</td><td>44</td><td>52</td><td>60</td>
+          </tr>
+          <tr>
+            <td>5</td><td>13</td><td>21</td><td>29</td><td>37</td><td>45</td><td>53</td><td>61</td>
+          </tr>
+          <tr>
+            <td>6</td><td>14</td><td>22</td><td>30</td><td>38</td><td>46</td><td>54</td><td>62</td>
+          </tr>
+          <tr>
+            <td>7</td><td>15</td><td>23</td><td>31</td><td>39</td><td>47</td><td>55</td><td>63</td>
+          </tr>
+        </tbody>
+      </table>
+      <label>
+        <input type="checkbox" class="cardCheck" data-value="4">
+        在这里面看到你的数字？
+      </label>
+    </div>
+
+    <!-- 卡片4：bit3=8 -->
+    <div class="card">
+      <h3>卡片 4</h3>
+      <table>
+        <tbody>
+          <tr>
+            <td>8</td><td>12</td><td>24</td><td>28</td><td>40</td><td>44</td><td>56</td><td>60</td>
+          </tr>
+          <tr>
+            <td>9</td><td>13</td><td>25</td><td>29</td><td>41</td><td>45</td><td>57</td><td>61</td>
+          </tr>
+          <tr>
+            <td>10</td><td>14</td><td>26</td><td>30</td><td>42</td><td>46</td><td>58</td><td>62</td>
+          </tr>
+          <tr>
+            <td>11</td><td>15</td><td>27</td><td>31</td><td>43</td><td>47</td><td>59</td><td>63</td>
+          </tr>
+        </tbody>
+      </table>
+      <label>
+        <input type="checkbox" class="cardCheck" data-value="8">
+        在这里面看到你的数字？
+      </label>
+    </div>
+
+    <!-- 卡片5：bit4=16 -->
+    <div class="card">
+      <h3>卡片 5</h3>
+      <table>
+        <tbody>
+          <tr>
+            <td>16</td><td>20</td><td>24</td><td>28</td><td>48</td><td>52</td><td>56</td><td>60</td>
+          </tr>
+          <tr>
+            <td>17</td><td>21</td><td>25</td><td>29</td><td>49</td><td>53</td><td>57</td><td>61</td>
+          </tr>
+          <tr>
+            <td>18</td><td>22</td><td>26</td><td>30</td><td>50</td><td>54</td><td>58</td><td>62</td>
+          </tr>
+          <tr>
+            <td>19</td><td>23</td><td>27</td><td>31</td><td>51</td><td>55</td><td>59</td><td>63</td>
+          </tr>
+        </tbody>
+      </table>
+      <label>
+        <input type="checkbox" class="cardCheck" data-value="16">
+        在这里面看到你的数字？
+      </label>
+    </div>
+
+    <!-- 卡片6：bit5=32 -->
+    <div class="card">
+      <h3>卡片 6</h3>
+      <table>
+        <tbody>
+          <tr>
+            <td>32</td><td>36</td><td>40</td><td>44</td><td>48</td><td>52</td><td>56</td><td>60</td>
+          </tr>
+          <tr>
+            <td>33</td><td>37</td><td>41</td><td>45</td><td>49</td><td>53</td><td>57</td><td>61</td>
+          </tr>
+          <tr>
+            <td>34</td><td>38</td><td>42</td><td>46</td><td>50</td><td>54</td><td>58</td><td>62</td>
+          </tr>
+          <tr>
+            <td>35</td><td>39</td><td>43</td><td>47</td><td>51</td><td>55</td><td>59</td><td>63</td>
+          </tr>
+        </tbody>
+      </table>
+      <label>
+        <input type="checkbox" class="cardCheck" data-value="32">
+        在这里面看到你的数字？
+      </label>
+    </div>
+
+  </div><!-- /.card-container -->
+
+  <div class="controls">
+    <button id="guessBtn">读心术</button>
+    <button id="revealBtn">揭秘</button>
+  </div>
+
+  <div id="resultArea"></div>
+
+</div><!-- /.container -->
+
+<footer>
+  二进制读心术 · 孙维刚教育研究院 - 陈硕老师
+</footer>
+
+<script>
+  // 获取所有复选框
+  const cardChecks = document.querySelectorAll('.cardCheck');
+  const guessBtn = document.getElementById('guessBtn');
+  const revealBtn = document.getElementById('revealBtn');
+  const resultArea = document.getElementById('resultArea');
+
+  let currentNumber = 0;  // 存放“猜到的数字”，以便在揭秘时使用
+
+  // 【读心术】按钮：根据所选卡片累加数值
+  guessBtn.addEventListener('click', function() {
+    let sum = 0;
+    cardChecks.forEach(chk => {
+      if (chk.checked) {
+        sum += parseInt(chk.dataset.value, 10);
+      }
+    });
+    currentNumber = sum;
+    if (sum > 0 && sum <= 63) {
+      resultArea.innerHTML = `
+        <p>你心中想的数字是：<span class="highlight">${sum}</span></p>
+        <p>（点击“揭秘”查看原理）</p>
+      `;
+    } else if (sum === 0) {
+      resultArea.innerHTML = `<p>你没有勾选任何卡片，也许你想的数字是 0 或大于 63？</p>`;
+    } else {
+      resultArea.innerHTML = `<p>似乎超过 63，或暂无法辨识。请确认所选卡片是否正确。</p>`;
+    }
+  });
+
+  // 【揭秘】按钮：展示二进制细节
+  revealBtn.addEventListener('click', function() {
+    if (currentNumber < 1 || currentNumber > 63) {
+      resultArea.innerHTML = `<p>还没有有效的数字（1～63）。请先点击“读心术”再来揭秘。</p>`;
+      return;
+    }
+    // 转为 6 位二进制字符串
+    let binStr = currentNumber.toString(2).padStart(6, '0'); 
+    // 每位对应 32,16,8,4,2,1
+    const bitLabels = [32, 16, 8, 4, 2, 1];
+    let detail = '';
+    for (let i = 0; i < 6; i++) {
+      detail += `<li>二进制位 <strong>${6 - i}</strong> (权值=${bitLabels[i]})：
+                  <strong>${binStr[i]}</strong> 
+                  ${binStr[i] === '1' ? '（你勾选了对应卡片）' : '（你没有勾选）'}
+                </li>`;
+    }
+
+    resultArea.innerHTML = `
+      <p>你心中想的数字是：<span class="highlight">${currentNumber}</span></p>
+      <p>它的 6 位二进制形式为：<span class="highlight">${binStr}</span></p>
+      <ul>${detail}</ul>
+      <p>原理：凡是位值为 1 的卡片被勾选，把这些位对应的数值相加，就得到 <strong>${currentNumber}</strong>！</p>
+    `;
+  });
+</script>
+
+</body>
+</html>
