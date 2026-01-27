@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>跳舞的小人密码</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Special+Elite&display=swap');
+
+        body {
+            background-color: #f3e5ab; /* 羊皮纸色 */
+            background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23dcb' fill-opacity='0.4' fill-rule='evenodd'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 1.4l2.83 2.83 1.41-1.41L1.41 0H0v1.41zM38.59 40l-2.83-2.83 1.41-1.41L40 38.59V40h-1.41zM40 1.41l-2.83 2.83-1.41-1.41L38.59 0H40v1.41zM20 18.6l2.83-2.83 1.41 1.41L21.41 20l2.83 2.83-1.41 1.41L20 21.41l-2.83 2.83-1.41-1.41L18.59 20l-2.83-2.83 1.41-1.41L20 18.59z'/%3E%3C/g%3E%3C/svg%3E");
+            font-family: 'Special Elite', 'Courier New', Courier, monospace;
+            color: #2c2c2c;
+            overscroll-behavior: none; 
+        }
+        
+        canvas {
+            background-color: #fffdf5;
+            border: 2px solid #2c2c2c;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+            max-width: 100%; 
+        }
+
+        .paper-shadow {
+            box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+        }
+
+        .touch-friendly {
+            min-height: 44px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-3 sm:p-6">
+
+    <div class="container max-w-4xl bg-white/85 p-4 sm:p-8 rounded-lg paper-shadow backdrop-blur-sm w-full">
+        <!-- 标题 -->
+        <h1 class="text-2xl sm:text-4xl font-bold text-center mb-6 border-b-4 border-black pb-4 tracking-widest">跳舞的小人密码</h1>
+        
+        <div class="flex flex-col gap-5">
+            <!-- 输入区域 -->
+            <div class="space-y-2">
+                <textarea id="input-text" 
+                    class="w-full h-28 p-3 text-lg border-2 border-black bg-yellow-50 focus:outline-none focus:ring-2 focus:ring-yellow-600 rounded resize-none"
+                    placeholder="请输入英文内容..."></textarea>
+            </div>
+
+            <!-- 输出区域 -->
+            <div class="space-y-2 w-full" id="canvas-container">
+                <div class="flex justify-center w-full overflow-hidden">
+                    <canvas id="output-canvas"></canvas>
+                </div>
+            </div>
+
+            <!-- 控制按钮 -->
+            <div class="flex flex-col sm:flex-row justify-end items-center pt-4 border-t-2 border-gray-300 gap-3">
+                <span class="text-xs text-gray-400 sm:hidden order-3 sm:order-1">长按图片可保存</span>
+                
+                <button onclick="toggleCipherTable()" 
+                    class="w-full sm:w-auto px-6 py-3 bg-yellow-600 text-white font-bold rounded hover:bg-yellow-700 active:bg-yellow-800 transition transform active:scale-95 flex items-center justify-center gap-2 touch-friendly shadow-md order-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    显示密码表
+                </button>
+
+                <button onclick="downloadImage()" 
+                    class="w-full sm:w-auto px-6 py-3 bg-black text-white font-bold rounded hover:bg-gray-800 active:bg-gray-700 transition transform active:scale-95 flex items-center justify-center gap-2 touch-friendly shadow-md order-1 sm:order-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    保存图片
+                </button>
+            </div>
+
+            <!-- 密码对照表区域 (默认隐藏) -->
+            <div id="cipher-table-area" class="hidden mt-4 border-t-2 border-dashed border-gray-400 pt-4">
+                <h2 class="text-xl font-bold text-center mb-4">A-Z 密码对照表</h2>
+                <div class="flex justify-center w-full overflow-hidden">
+                    <canvas id="cipher-table-canvas"></canvas>
+                </div>
+            </div>
+
+            <div class="text-center mt-4 text-gray-500 text-sm font-sans">
+                @孙维刚教育研究院
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('output-canvas');
+        const ctx = canvas.getContext('2d');
+        const input = document.getElementById('input-text');
+        const canvasContainer = document.getElementById('canvas-container');
+        
+        // 密码表相关元素
+        const cipherTableArea = document.getElementById('cipher-table-area');
+        const cipherCanvas = document.getElementById('cipher-table-canvas');
+        const cipherCtx = cipherCanvas.getContext('2d');
+
+        // 基础绘图配置
+        const FIG_WIDTH = 40;
+        const FIG_HEIGHT = 70;
+        const PADDING_X = 10; 
+        const PADDING_Y = 20;
+        const LINE_WIDTH = 3;
+
+        // 监听输入
+        input.addEventListener('input', render);
+        
+        // 窗口大小改变时重绘
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(() => {
+                render();
+                if (!cipherTableArea.classList.contains('hidden')) {
+                    drawCipherTable();
+                }
+            });
+        });
+
+        // 初始化
+        window.onload = () => {
+            render();
+        };
+
+        function toggleCipherTable() {
+            cipherTableArea.classList.toggle('hidden');
+            const btn = document.querySelector('button[onclick="toggleCipherTable()"]');
+            
+            if (!cipherTableArea.classList.contains('hidden')) {
+                btn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    隐藏密码表`;
+                drawCipherTable();
+            } else {
+                btn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    显示密码表`;
+            }
+        }
+
+        function render() {
+            const rawText = input.value.toUpperCase();
+            const words = rawText.match(/[A-Z]+/g) || [];
+            
+            let charsToDraw = [];
+            
+            if (words.length === 0) {
+                charsToDraw = [];
+            } else {
+                words.forEach(word => {
+                    for (let i = 0; i < word.length; i++) {
+                        charsToDraw.push({
+                            char: word[i],
+                            hasFlag: (i === word.length - 1)
+                        });
+                    }
+                });
+            }
+
+            const containerWidth = canvasContainer.clientWidth;
+            const itemWidth = FIG_WIDTH + PADDING_X;
+            const maxCols = Math.max(1, Math.floor((containerWidth - 10) / itemWidth));
+            
+            const totalCount = charsToDraw.length || 1; 
+            const rows = Math.ceil(totalCount / maxCols);
+            
+            const finalWidth = (totalCount < maxCols) ? (totalCount * itemWidth + PADDING_X) : (maxCols * itemWidth + PADDING_X);
+            canvas.width = Math.max(300, finalWidth); // 保持一个最小宽度
+            canvas.height = Math.max(100, rows * (FIG_HEIGHT + PADDING_Y) + PADDING_Y);
+
+            ctx.fillStyle = '#fffdf5';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = LINE_WIDTH;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            let x = PADDING_X;
+            let y = PADDING_Y;
+
+            if (charsToDraw.length === 0) return;
+
+            for (let i = 0; i < charsToDraw.length; i++) {
+                const item = charsToDraw[i];
+                if (i > 0 && i % maxCols === 0) {
+                    x = PADDING_X;
+                    y += FIG_HEIGHT + PADDING_Y;
+                }
+                drawMan(ctx, x, y, item.char, item.hasFlag);
+                x += itemWidth;
+            }
+        }
+
+        function drawCipherTable() {
+            const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            const containerWidth = cipherTableArea.clientWidth - 20; // 留出一点边距
+            
+            // 每一个单元格包含：小人 + 下方的字母
+            const cellWidth = FIG_WIDTH + 20;
+            const cellHeight = FIG_HEIGHT + 30; // 增加高度给字母文字
+            
+            const maxCols = Math.floor(containerWidth / cellWidth);
+            const cols = Math.max(3, Math.min(6, maxCols)); // 限制列数在3-6之间，美观
+            const rows = Math.ceil(26 / cols);
+
+            cipherCanvas.width = cols * cellWidth + PADDING_X;
+            cipherCanvas.height = rows * cellHeight + PADDING_Y;
+
+            // 背景
+            cipherCtx.fillStyle = '#fffdf5';
+            cipherCtx.fillRect(0, 0, cipherCanvas.width, cipherCanvas.height);
+            
+            cipherCtx.strokeStyle = '#000';
+            cipherCtx.lineWidth = LINE_WIDTH;
+            cipherCtx.lineCap = 'round';
+            cipherCtx.lineJoin = 'round';
+            cipherCtx.font = "bold 20px 'Courier New', monospace";
+            cipherCtx.textAlign = "center";
+            cipherCtx.fillStyle = "#000";
+
+            let x = PADDING_X;
+            let y = PADDING_Y;
+
+            for (let i = 0; i < alphabet.length; i++) {
+                const char = alphabet[i];
+                
+                if (i > 0 && i % cols === 0) {
+                    x = PADDING_X;
+                    y += cellHeight;
+                }
+
+                // 绘制小人 (居中)
+                // drawMan 在 (x, y) 处绘制，我们需要调整一下偏移使其在格子中间
+                const offsetX = (cellWidth - (FIG_WIDTH + PADDING_X)) / 2;
+                drawMan(cipherCtx, x + offsetX, y, char, false);
+                
+                // 绘制文字
+                cipherCtx.fillText(char, x + FIG_WIDTH/2 + PADDING_X/2 + offsetX, y + FIG_HEIGHT + 20);
+
+                x += cellWidth;
+            }
+        }
+
+        function drawMan(ctx, x, y, char, hasFlag) {
+            ctx.save();
+            ctx.translate(x + FIG_WIDTH / 2, y + FIG_HEIGHT / 2);
+
+            const poses = {
+                'A': { inv: false, arms: 'up', legs: 'stand' },
+                'B': { inv: false, arms: 'low', legs: 'stand' },
+                'C': { inv: false, arms: 'weird_left', legs: 'squat' },
+                'D': { inv: true,  arms: 'low', legs: 'stand' },
+                'E': { inv: false, arms: 'up', legs: 'wide' },
+                'F': { inv: false, arms: 'asym_f', legs: 'stand' },
+                'G': { inv: true,  arms: 'low', legs: 'wide_curve' },
+                'H': { inv: true,  arms: 'akimbo', legs: 'squat' },
+                'I': { inv: false, arms: 'up', legs: 'kick_left' },
+                'J': { inv: false, arms: 'left_out', legs: 'walk_left' },
+                'K': { inv: false, arms: 'akimbo_one', legs: 'wide' },
+                'L': { inv: false, arms: 'akimbo', legs: 'squat' },
+                'M': { inv: false, arms: 'up', legs: 'squat_high' },
+                'N': { inv: false, arms: 'low', legs: 'wide' },
+                'O': { inv: false, arms: 'up', legs: 'walk_left' },
+                'P': { inv: false, arms: 'low', legs: 'walk_left' },
+                'Q': { inv: false, arms: 'akimbo', legs: 'walk_right' },
+                'R': { inv: false, arms: 'up', legs: 'kick_right' },
+                'S': { inv: false, arms: 'box', legs: 'squat' },
+                'T': { inv: true,  arms: 'up', legs: 'wide' },
+                'U': { inv: false, arms: 'box', legs: 'wide' },
+                'V': { inv: false, arms: 'low', legs: 'kick_left_stiff' },
+                'W': { inv: false, arms: 'low', legs: 'kick_right_stiff' },
+                'X': { inv: true,  arms: 'weird_x', legs: 'wide' },
+                'Y': { inv: false, arms: 'one_up', legs: 'squat' },
+                'Z': { inv: true,  arms: 'box_asym', legs: 'wide' }
+            };
+
+            const pose = poses[char] || poses['A'];
+
+            if (pose.inv) {
+                ctx.rotate(Math.PI);
+                ctx.translate(0, -10);
+            }
+
+            // 头
+            ctx.beginPath();
+            ctx.arc(0, -20, 5, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 身
+            ctx.beginPath();
+            ctx.moveTo(0, -15);
+            ctx.lineTo(0, 15);
+            ctx.stroke();
+
+            // 四肢
+            drawArms(ctx, pose.arms);
+            drawLegs(ctx, pose.legs);
+
+            // 旗帜
+            if (hasFlag) {
+               drawFlag(ctx, pose.inv);
+            }
+
+            ctx.restore();
+        }
+
+        function drawFlag(ctx, inverted) {
+            ctx.beginPath();
+            if(inverted) {
+                 ctx.moveTo(-15, 5); ctx.lineTo(-25, 5); ctx.lineTo(-25, 15); ctx.lineTo(-15, 5);
+            } else {
+                ctx.moveTo(-15, -30); 
+                ctx.lineTo(-15, -55); 
+                ctx.lineTo(-25, -45); 
+                ctx.lineTo(-15, -35); 
+            }
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        function drawArms(ctx, type) {
+            ctx.beginPath();
+            const shoulderY = -12;
+            switch (type) {
+                case 'up': ctx.moveTo(-15, -30); ctx.lineTo(0, shoulderY); ctx.lineTo(15, -30); break;
+                case 'low': ctx.moveTo(-15, 5); ctx.lineTo(0, shoulderY); ctx.lineTo(15, 5); break;
+                case 'left_out': ctx.moveTo(-15, -20); ctx.lineTo(0, shoulderY); ctx.lineTo(15, 5); break;
+                case 'weird_left': ctx.moveTo(-15, -20); ctx.lineTo(0, shoulderY); ctx.lineTo(10, -5); break;
+                case 'asym_f': ctx.moveTo(-15, -25); ctx.lineTo(-10, -30); ctx.moveTo(-15, -25); ctx.lineTo(0, shoulderY); ctx.lineTo(15, 5); break;
+                case 'akimbo': ctx.moveTo(-10, 0); ctx.lineTo(-15, -10); ctx.lineTo(0, shoulderY); ctx.lineTo(15, -10); ctx.lineTo(10, 0); break;
+                case 'akimbo_one': ctx.moveTo(-10, 0); ctx.lineTo(-15, -10); ctx.lineTo(0, shoulderY); ctx.lineTo(15, -5); break;
+                case 'box': ctx.moveTo(-15, -30); ctx.lineTo(-15, -12); ctx.lineTo(0, shoulderY); ctx.lineTo(15, -12); ctx.lineTo(15, -30); break;
+                case 'one_up': ctx.moveTo(-15, -5); ctx.lineTo(0, shoulderY); ctx.lineTo(15, -30); break;
+                case 'weird_x': ctx.moveTo(-15, 5); ctx.lineTo(-10, 10); ctx.moveTo(-15, 5); ctx.lineTo(0, shoulderY); ctx.lineTo(15, 5); ctx.lineTo(10, 10); break;
+                case 'box_asym': ctx.moveTo(-15, -20); ctx.lineTo(-15, -10); ctx.lineTo(0, shoulderY); ctx.lineTo(15, -5); ctx.lineTo(15, -15); break;
+                default: ctx.moveTo(-15, -30); ctx.lineTo(0, shoulderY); ctx.lineTo(15, -30);
+            }
+            ctx.stroke();
+        }
+
+        function drawLegs(ctx, type) {
+            ctx.beginPath();
+            const hipY = 15;
+            switch (type) {
+                case 'stand': ctx.moveTo(-5, 35); ctx.lineTo(0, hipY); ctx.lineTo(5, 35); break;
+                case 'wide': ctx.moveTo(-15, 35); ctx.lineTo(0, hipY); ctx.lineTo(15, 35); break;
+                case 'wide_curve': ctx.moveTo(-15, 30); ctx.quadraticCurveTo(-10, 35, 0, hipY); ctx.quadraticCurveTo(10, 35, 15, 30); break;
+                case 'walk_right': ctx.moveTo(-10, 35); ctx.lineTo(0, hipY); ctx.lineTo(10, 25); ctx.lineTo(10, 35); break;
+                case 'walk_left': ctx.moveTo(-10, 35); ctx.lineTo(-10, 25); ctx.lineTo(0, hipY); ctx.lineTo(10, 35); break;
+                case 'squat': ctx.moveTo(0, 35); ctx.lineTo(-10, 25); ctx.lineTo(0, hipY); ctx.lineTo(10, 25); ctx.lineTo(0, 35); break;
+                case 'squat_wide': ctx.moveTo(-10, 35); ctx.lineTo(-15, 25); ctx.lineTo(0, hipY); ctx.lineTo(15, 25); ctx.lineTo(10, 35); break;
+                case 'squat_high': ctx.moveTo(-5, 35); ctx.lineTo(-10, 25); ctx.lineTo(0, hipY); ctx.lineTo(10, 25); ctx.lineTo(5, 35); break;
+                case 'kick_left': ctx.moveTo(-15, 20); ctx.lineTo(0, hipY); ctx.lineTo(5, 35); break;
+                case 'kick_right': ctx.moveTo(-5, 35); ctx.lineTo(0, hipY); ctx.lineTo(15, 20); break;
+                case 'walk_right_stiff': ctx.moveTo(-10, 35); ctx.lineTo(0, hipY); ctx.lineTo(10, 35); break;
+                case 'kick_left_stiff': ctx.moveTo(-15, 25); ctx.lineTo(0, hipY); ctx.lineTo(5, 35); break;
+                case 'kick_right_stiff': ctx.moveTo(-5, 35); ctx.lineTo(0, hipY); ctx.lineTo(15, 25); break;
+                default: ctx.moveTo(-10, 35); ctx.lineTo(0, hipY); ctx.lineTo(10, 35);
+            }
+            ctx.stroke();
+        }
+
+        function downloadImage() {
+            try {
+                const link = document.createElement('a');
+                link.download = 'dancing_men_cipher.png';
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (e) {
+                alert("保存遇到问题，请尝试长按图片并选择'保存到相册'");
+            }
+        }
+    </script>
+</body>
+</html>
