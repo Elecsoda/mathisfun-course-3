@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>二进制读心术</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     /* 页面整体 */
     body {
@@ -53,10 +54,41 @@
       width: 300px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       overflow: hidden;
-      transition: transform 0.3s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
     }
     .card:hover {
       transform: translateY(-3px);
+    }
+    
+    /* 揭秘模式下的卡片交互样式 */
+    .card.reveal-active {
+      cursor: pointer;
+      border: 2px solid #28a745; /* 绿色边框提示可点击 */
+    }
+    .card.reveal-active:hover {
+      box-shadow: 0 0 20px rgba(40, 167, 69, 0.5);
+    }
+    /* 提示用户点击的图标或覆盖层 */
+    .card.reveal-active::after {
+      content: "🔍 点击查看二进制秘密";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(40, 167, 69, 0.1);
+      color: #155724;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none; /* 让鼠标事件穿透到卡片本身 */
+    }
+    .card.reveal-active:hover::after {
+      opacity: 1;
     }
 
     .card h3 {
@@ -67,6 +99,11 @@
       font-size: 16px;
       letter-spacing: 1px;
       text-align: center;
+      transition: background 0.3s;
+    }
+    
+    .card.reveal-active h3 {
+      background: #28a745;
     }
 
     /* 卡片内表格 */
@@ -80,9 +117,10 @@
       text-align: center;
     }
     .card td {
-      padding: 6px 8px;
+      padding: 6px 2px;
       font-size: 14px;
-      width: 12%;
+      height: 30px;
+      width: 12.5%;
     }
 
     /* 卡片底部的勾选提示 */
@@ -116,12 +154,26 @@
       color: #fff;
       font-size: 14px;
       transition: background 0.2s ease;
+      min-width: 80px; /* 保证文字变化时按钮宽度不乱跳 */
     }
     button:hover {
       background: #0056b3;
     }
+    /* 重新开始按钮的特殊样式（可选） */
+    button.restart-mode {
+      background: #ffc107;
+      color: #333;
+    }
+    button.restart-mode:hover {
+      background: #e0a800;
+    }
 
-    /* 结果区域 */
+    #revealBtn.active {
+      background: #28a745;
+      box-shadow: inset 0 3px 5px rgba(0,0,0,0.2);
+    }
+
+    /* 结果区域（在页面底部保留显示） */
     #resultArea {
       max-width: 600px;
       margin: 0 auto;
@@ -131,6 +183,7 @@
       min-height: 50px;
       line-height: 1.6;
       box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+      text-align: center;
     }
     #resultArea p {
       margin-bottom: 10px;
@@ -141,8 +194,20 @@
       color: #d9534f;
       font-weight: bold;
     }
+    
+    .instruction-tip {
+      color: #28a745;
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+      font-size: 0.9em;
+      background: #e8f5e9;
+      padding: 5px;
+      border-radius: 4px;
+      text-align: center;
+    }
 
-    /* 底部版权或备注 */
+    /* 底部版权 */
     footer {
       text-align: center;
       padding: 10px 0;
@@ -152,6 +217,125 @@
       background: #f0f0f0;
       margin-top: 40px;
     }
+
+    /* ================= 弹窗样式 ================= */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(3px);
+    }
+    .modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: #fff;
+      width: 90%;
+      max-width: 600px;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      transform: scale(0.8);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      text-align: center;
+      position: relative;
+    }
+    .modal-overlay.show .modal-content {
+      transform: scale(1);
+    }
+
+    /* 通用弹窗标题 */
+    .modal-header h2 {
+      margin: 0 0 15px 0;
+      color: #28a745;
+      font-size: 24px;
+    }
+    .modal-tip {
+      color: #666;
+      font-size: 13px;
+      margin-bottom: 15px;
+    }
+
+    /* 读心术结果的特效样式 */
+    .magic-result-title {
+      color: #007bff !important;
+      font-size: 26px !important;
+      margin-bottom: 20px !important;
+    }
+    .magic-number {
+      font-size: 80px;
+      font-weight: bold;
+      color: #d9534f;
+      margin: 20px 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+    .magic-phrase {
+      font-size: 18px;
+      color: #555;
+      font-style: italic;
+    }
+
+    /* 弹窗内的表格样式（揭秘用） */
+    .modal-table {
+      width: 100%;
+      margin: 0 auto;
+      border-collapse: collapse;
+    }
+    .modal-table td {
+      border: 1px solid #ddd;
+      padding: 8px 4px;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    /* 弹窗内：十进制数字 */
+    .cell-decimal {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      line-height: 1.2;
+    }
+    
+    /* 弹窗内：二进制数字 */
+    .cell-binary {
+      font-family: "Courier New", Courier, monospace;
+      font-size: 14px;
+      color: #666;
+      margin-top: 4px;
+      letter-spacing: -0.5px;
+    }
+
+    .modal-bit-highlight {
+      color: #d9534f;
+      font-weight: 900;
+      font-size: 1.25em;
+      text-decoration: underline;
+    }
+    
+    /* 关闭提示 */
+    .close-hint {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #999;
+      cursor: pointer;
+    }
+    .close-hint:hover {
+      color: #333;
+    }
+
   </style>
 </head>
 <body>
@@ -164,24 +348,15 @@
 <div class="container">
   
   <div class="card-container">
-    <!-- 卡片1：bit0=1 的数字，共32个，按列优先 -->
-    <div class="card">
+    <!-- 卡片1：bit0=1 -->
+    <div class="card" id="card1">
       <h3>卡片 1</h3>
       <table>
         <tbody>
-          <!-- 按列优先，每列4个数字 -->
-          <tr>
-            <td>1</td><td>9</td><td>17</td><td>25</td><td>33</td><td>41</td><td>49</td><td>57</td>
-          </tr>
-          <tr>
-            <td>3</td><td>11</td><td>19</td><td>27</td><td>35</td><td>43</td><td>51</td><td>59</td>
-          </tr>
-          <tr>
-            <td>5</td><td>13</td><td>21</td><td>29</td><td>37</td><td>45</td><td>53</td><td>61</td>
-          </tr>
-          <tr>
-            <td>7</td><td>15</td><td>23</td><td>31</td><td>39</td><td>47</td><td>55</td><td>63</td>
-          </tr>
+          <tr><td>1</td><td>9</td><td>17</td><td>25</td><td>33</td><td>41</td><td>49</td><td>57</td></tr>
+          <tr><td>3</td><td>11</td><td>19</td><td>27</td><td>35</td><td>43</td><td>51</td><td>59</td></tr>
+          <tr><td>5</td><td>13</td><td>21</td><td>29</td><td>37</td><td>45</td><td>53</td><td>61</td></tr>
+          <tr><td>7</td><td>15</td><td>23</td><td>31</td><td>39</td><td>47</td><td>55</td><td>63</td></tr>
         </tbody>
       </table>
       <label>
@@ -191,22 +366,14 @@
     </div>
 
     <!-- 卡片2：bit1=2 -->
-    <div class="card">
+    <div class="card" id="card2">
       <h3>卡片 2</h3>
       <table>
         <tbody>
-          <tr>
-            <td>2</td><td>10</td><td>18</td><td>26</td><td>34</td><td>42</td><td>50</td><td>58</td>
-          </tr>
-          <tr>
-            <td>3</td><td>11</td><td>19</td><td>27</td><td>35</td><td>43</td><td>51</td><td>59</td>
-          </tr>
-          <tr>
-            <td>6</td><td>14</td><td>22</td><td>30</td><td>38</td><td>46</td><td>54</td><td>62</td>
-          </tr>
-          <tr>
-            <td>7</td><td>15</td><td>23</td><td>31</td><td>39</td><td>47</td><td>55</td><td>63</td>
-          </tr>
+          <tr><td>2</td><td>10</td><td>18</td><td>26</td><td>34</td><td>42</td><td>50</td><td>58</td></tr>
+          <tr><td>3</td><td>11</td><td>19</td><td>27</td><td>35</td><td>43</td><td>51</td><td>59</td></tr>
+          <tr><td>6</td><td>14</td><td>22</td><td>30</td><td>38</td><td>46</td><td>54</td><td>62</td></tr>
+          <tr><td>7</td><td>15</td><td>23</td><td>31</td><td>39</td><td>47</td><td>55</td><td>63</td></tr>
         </tbody>
       </table>
       <label>
@@ -216,22 +383,14 @@
     </div>
 
     <!-- 卡片3：bit2=4 -->
-    <div class="card">
+    <div class="card" id="card3">
       <h3>卡片 3</h3>
       <table>
         <tbody>
-          <tr>
-            <td>4</td><td>12</td><td>20</td><td>28</td><td>36</td><td>44</td><td>52</td><td>60</td>
-          </tr>
-          <tr>
-            <td>5</td><td>13</td><td>21</td><td>29</td><td>37</td><td>45</td><td>53</td><td>61</td>
-          </tr>
-          <tr>
-            <td>6</td><td>14</td><td>22</td><td>30</td><td>38</td><td>46</td><td>54</td><td>62</td>
-          </tr>
-          <tr>
-            <td>7</td><td>15</td><td>23</td><td>31</td><td>39</td><td>47</td><td>55</td><td>63</td>
-          </tr>
+          <tr><td>4</td><td>12</td><td>20</td><td>28</td><td>36</td><td>44</td><td>52</td><td>60</td></tr>
+          <tr><td>5</td><td>13</td><td>21</td><td>29</td><td>37</td><td>45</td><td>53</td><td>61</td></tr>
+          <tr><td>6</td><td>14</td><td>22</td><td>30</td><td>38</td><td>46</td><td>54</td><td>62</td></tr>
+          <tr><td>7</td><td>15</td><td>23</td><td>31</td><td>39</td><td>47</td><td>55</td><td>63</td></tr>
         </tbody>
       </table>
       <label>
@@ -241,22 +400,14 @@
     </div>
 
     <!-- 卡片4：bit3=8 -->
-    <div class="card">
+    <div class="card" id="card4">
       <h3>卡片 4</h3>
       <table>
         <tbody>
-          <tr>
-            <td>8</td><td>12</td><td>24</td><td>28</td><td>40</td><td>44</td><td>56</td><td>60</td>
-          </tr>
-          <tr>
-            <td>9</td><td>13</td><td>25</td><td>29</td><td>41</td><td>45</td><td>57</td><td>61</td>
-          </tr>
-          <tr>
-            <td>10</td><td>14</td><td>26</td><td>30</td><td>42</td><td>46</td><td>58</td><td>62</td>
-          </tr>
-          <tr>
-            <td>11</td><td>15</td><td>27</td><td>31</td><td>43</td><td>47</td><td>59</td><td>63</td>
-          </tr>
+          <tr><td>8</td><td>12</td><td>24</td><td>28</td><td>40</td><td>44</td><td>56</td><td>60</td></tr>
+          <tr><td>9</td><td>13</td><td>25</td><td>29</td><td>41</td><td>45</td><td>57</td><td>61</td></tr>
+          <tr><td>10</td><td>14</td><td>26</td><td>30</td><td>42</td><td>46</td><td>58</td><td>62</td></tr>
+          <tr><td>11</td><td>15</td><td>27</td><td>31</td><td>43</td><td>47</td><td>59</td><td>63</td></tr>
         </tbody>
       </table>
       <label>
@@ -266,22 +417,14 @@
     </div>
 
     <!-- 卡片5：bit4=16 -->
-    <div class="card">
+    <div class="card" id="card5">
       <h3>卡片 5</h3>
       <table>
         <tbody>
-          <tr>
-            <td>16</td><td>20</td><td>24</td><td>28</td><td>48</td><td>52</td><td>56</td><td>60</td>
-          </tr>
-          <tr>
-            <td>17</td><td>21</td><td>25</td><td>29</td><td>49</td><td>53</td><td>57</td><td>61</td>
-          </tr>
-          <tr>
-            <td>18</td><td>22</td><td>26</td><td>30</td><td>50</td><td>54</td><td>58</td><td>62</td>
-          </tr>
-          <tr>
-            <td>19</td><td>23</td><td>27</td><td>31</td><td>51</td><td>55</td><td>59</td><td>63</td>
-          </tr>
+          <tr><td>16</td><td>20</td><td>24</td><td>28</td><td>48</td><td>52</td><td>56</td><td>60</td></tr>
+          <tr><td>17</td><td>21</td><td>25</td><td>29</td><td>49</td><td>53</td><td>57</td><td>61</td></tr>
+          <tr><td>18</td><td>22</td><td>26</td><td>30</td><td>50</td><td>54</td><td>58</td><td>62</td></tr>
+          <tr><td>19</td><td>23</td><td>27</td><td>31</td><td>51</td><td>55</td><td>59</td><td>63</td></tr>
         </tbody>
       </table>
       <label>
@@ -291,22 +434,14 @@
     </div>
 
     <!-- 卡片6：bit5=32 -->
-    <div class="card">
+    <div class="card" id="card6">
       <h3>卡片 6</h3>
       <table>
         <tbody>
-          <tr>
-            <td>32</td><td>36</td><td>40</td><td>44</td><td>48</td><td>52</td><td>56</td><td>60</td>
-          </tr>
-          <tr>
-            <td>33</td><td>37</td><td>41</td><td>45</td><td>49</td><td>53</td><td>57</td><td>61</td>
-          </tr>
-          <tr>
-            <td>34</td><td>38</td><td>42</td><td>46</td><td>50</td><td>54</td><td>58</td><td>62</td>
-          </tr>
-          <tr>
-            <td>35</td><td>39</td><td>43</td><td>47</td><td>51</td><td>55</td><td>59</td><td>63</td>
-          </tr>
+          <tr><td>32</td><td>36</td><td>40</td><td>44</td><td>48</td><td>52</td><td>56</td><td>60</td></tr>
+          <tr><td>33</td><td>37</td><td>41</td><td>45</td><td>49</td><td>53</td><td>57</td><td>61</td></tr>
+          <tr><td>34</td><td>38</td><td>42</td><td>46</td><td>50</td><td>54</td><td>58</td><td>62</td></tr>
+          <tr><td>35</td><td>39</td><td>43</td><td>47</td><td>51</td><td>55</td><td>59</td><td>63</td></tr>
         </tbody>
       </table>
       <label>
@@ -327,20 +462,74 @@
 </div><!-- /.container -->
 
 <footer>
-  二进制读心术 · 孙维刚教育研究院 - 陈硕老师
+  @孙维刚教育研究院
 </footer>
 
+<!-- 弹窗容器（共用） -->
+<div id="modalOverlay" class="modal-overlay">
+  <div class="modal-content" id="modalContent">
+    <!-- 内容将由 JS 动态生成 -->
+  </div>
+</div>
+
 <script>
-  // 获取所有复选框
+  // 获取所有元素
   const cardChecks = document.querySelectorAll('.cardCheck');
+  const allCards = document.querySelectorAll('.card');
   const guessBtn = document.getElementById('guessBtn');
   const revealBtn = document.getElementById('revealBtn');
   const resultArea = document.getElementById('resultArea');
+  
+  // 弹窗相关元素
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalContent = document.getElementById('modalContent');
 
-  let currentNumber = 0;  // 存放“猜到的数字”，以便在揭秘时使用
+  let currentNumber = 0;
+  let isRevealMode = false;
 
-  // 【读心术】按钮：根据所选卡片累加数值
+  // 神秘台词库
+  const mysteryPhrases = [
+    "我猜猜，你想的数字是……",
+    "我来施加魔法，你想的数字是……",
+    "正在感应你的脑电波……",
+    "星辰指引着我，答案是……",
+    "透过二进制的迷雾，我看到了……",
+    "真相只有一个，那就是……"
+  ];
+
+  // 初始化：保存原始数据到 dataset
+  document.querySelectorAll('.card td').forEach(td => {
+    td.dataset.origin = td.innerText;
+  });
+
+  // 全局重置函数
+  function resetGame() {
+    // 1. 清空所有勾选
+    cardChecks.forEach(chk => chk.checked = false);
+    
+    // 2. 重置内部状态
+    currentNumber = 0;
+    
+    // 3. 清空结果显示
+    resultArea.innerHTML = '';
+    
+    // 4. 重置揭秘模式（去掉边框等）
+    resetRevealMode();
+    
+    // 5. 按钮状态复原
+    guessBtn.innerText = '读心术';
+    guessBtn.classList.remove('restart-mode');
+  }
+
+  // 【读心术 / 重新开始】按钮
   guessBtn.addEventListener('click', function() {
+    // 如果按钮显示为“重新开始”，则执行重置逻辑
+    if (this.innerText === '重新开始') {
+      resetGame();
+      return;
+    }
+
+    // 正常“读心术”逻辑
     let sum = 0;
     cardChecks.forEach(chk => {
       if (chk.checked) {
@@ -348,43 +537,156 @@
       }
     });
     currentNumber = sum;
+
+    // 每次计算前确保不在揭秘模式
+    resetRevealMode();
+
     if (sum > 0 && sum <= 63) {
+      // 1. 随机选择一句台词
+      const randomPhrase = mysteryPhrases[Math.floor(Math.random() * mysteryPhrases.length)];
+      
+      // 2. 弹出“读心结果”弹窗
+      modalContent.innerHTML = `
+        <div class="modal-header">
+          <h2 class="magic-result-title">🔮 读心时刻 🔮</h2>
+        </div>
+        <div class="magic-phrase">${randomPhrase}</div>
+        <div class="magic-number">${sum}</div>
+        <div class="close-hint">（点击任意处关闭）</div>
+      `;
+      modalOverlay.classList.add('show');
+
+      // 3. 同时更新页面底部的 resultArea
       resultArea.innerHTML = `
         <p>你心中想的数字是：<span class="highlight">${sum}</span></p>
         <p>（点击“揭秘”查看原理）</p>
       `;
+
     } else if (sum === 0) {
+      modalContent.innerHTML = `
+        <div class="modal-header"><h2>🤔 嗯？</h2></div>
+        <p>水晶球一片模糊……</p>
+        <p>你好像没有勾选任何卡片哦。</p>
+        <div class="close-hint">（点击任意处关闭）</div>
+      `;
+      modalOverlay.classList.add('show');
       resultArea.innerHTML = `<p>你没有勾选任何卡片，也许你想的数字是 0 或大于 63？</p>`;
     } else {
-      resultArea.innerHTML = `<p>似乎超过 63，或暂无法辨识。请确认所选卡片是否正确。</p>`;
+      resultArea.innerHTML = `<p>似乎超过 63，或暂无法辨识。</p>`;
     }
   });
 
-  // 【揭秘】按钮：展示二进制细节
+  // 【揭秘】按钮
   revealBtn.addEventListener('click', function() {
-    if (currentNumber < 1 || currentNumber > 63) {
-      resultArea.innerHTML = `<p>还没有有效的数字（1～63）。请先点击“读心术”再来揭秘。</p>`;
-      return;
-    }
-    // 转为 6 位二进制字符串
-    let binStr = currentNumber.toString(2).padStart(6, '0'); 
-    // 每位对应 32,16,8,4,2,1
-    const bitLabels = [32, 16, 8, 4, 2, 1];
-    let detail = '';
-    for (let i = 0; i < 6; i++) {
-      detail += `<li>二进制位 <strong>${6 - i}</strong> (权值=${bitLabels[i]})：
-                  <strong>${binStr[i]}</strong> 
-                  ${binStr[i] === '1' ? '（你勾选了对应卡片）' : '（你没有勾选）'}
-                </li>`;
-    }
+    // 切换按钮文字为“重新开始”
+    guessBtn.innerText = '重新开始';
+    guessBtn.classList.add('restart-mode');
 
-    resultArea.innerHTML = `
-      <p>你心中想的数字是：<span class="highlight">${currentNumber}</span></p>
-      <p>它的 6 位二进制形式为：<span class="highlight">${binStr}</span></p>
-      <ul>${detail}</ul>
-      <p>原理：凡是位值为 1 的卡片被勾选，把这些位对应的数值相加，就得到 <strong>${currentNumber}</strong>！</p>
-    `;
+    if (currentNumber > 0 && currentNumber <= 63) {
+      let binStr = currentNumber.toString(2).padStart(6, '0'); 
+      const bitLabels = [32, 16, 8, 4, 2, 1];
+      let detail = '';
+      for (let i = 0; i < 6; i++) {
+        detail += `<li>二进制位 <strong>${6 - i}</strong> (权值=${bitLabels[i]})：
+                    <strong>${binStr[i]}</strong> 
+                    ${binStr[i] === '1' ? '（你勾选了对应卡片）' : '（你没有勾选）'}
+                  </li>`;
+      }
+
+      resultArea.innerHTML = `
+        <p>你心中想的数字是：<span class="highlight">${currentNumber}</span></p>
+        <p>它的 6 位二进制形式为：<span class="highlight">${binStr}</span></p>
+        <ul>${detail}</ul>
+        <p>原理：凡是位值为 1 的卡片被勾选，把这些位对应的数值相加，就得到 <strong>${currentNumber}</strong>！</p>
+        <span class="instruction-tip">✨ 现在的你可以点击上方的任意卡片，弹窗放大查看其中的二进制奥秘！</span>
+      `;
+    } else {
+      resultArea.innerHTML = `
+        <p>请先选择卡片并点击“读心术”，确定一个数字后再来揭秘。</p>
+        <span class="instruction-tip">不过，你现在依然可以点击上方卡片，探索它们背后的二进制规律。</span>
+      `;
+    }
+    activateRevealMode();
   });
+
+  function activateRevealMode() {
+    isRevealMode = true;
+    revealBtn.classList.add('active');
+    allCards.forEach(card => card.classList.add('reveal-active'));
+  }
+
+  function resetRevealMode() {
+    isRevealMode = false;
+    revealBtn.classList.remove('active');
+    allCards.forEach(card => card.classList.remove('reveal-active'));
+    closeModal();
+  }
+
+  // 点击卡片事件（揭秘模式）
+  allCards.forEach(card => {
+    card.addEventListener('click', function(e) {
+      if (!isRevealMode) return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
+      openCardModal(card);
+    });
+  });
+
+  // 打开卡片详情弹窗（揭秘模式）
+  function openCardModal(card) {
+    const checkbox = card.querySelector('.cardCheck');
+    const cardValue = parseInt(checkbox.dataset.value, 10);
+    const title = card.querySelector('h3').innerText;
+
+    const highlightIndex = 5 - Math.log2(cardValue);
+    const originTds = Array.from(card.querySelectorAll('td')).map(td => td.dataset.origin);
+
+    // 构建表格 HTML
+    let tableHtml = '<table class="modal-table"><tbody>';
+    let dataIndex = 0;
+    for (let r = 0; r < 4; r++) {
+      tableHtml += '<tr>';
+      for (let c = 0; c < 8; c++) {
+        if (dataIndex < originTds.length) {
+          const num = parseInt(originTds[dataIndex], 10);
+          const binStr = num.toString(2).padStart(6, '0');
+          const prefix = binStr.substring(0, highlightIndex);
+          const targetBit = binStr[highlightIndex];
+          const suffix = binStr.substring(highlightIndex + 1);
+          
+          const cellContent = `
+            <div class="cell-decimal">${num}</div>
+            <div class="cell-binary">
+              ${prefix}<span class="modal-bit-highlight">${targetBit}</span>${suffix}
+            </div>
+          `;
+          tableHtml += `<td>${cellContent}</td>`;
+          dataIndex++;
+        }
+      }
+      tableHtml += '</tr>';
+    }
+    tableHtml += '</tbody></table>';
+
+    // 重构 Modal 内容
+    modalContent.innerHTML = `
+      <div class="modal-header">
+        <h2 id="modalTitle">${title} (位值: ${cardValue})</h2>
+        <div class="modal-tip">上方为十进制数字，下方为二进制数字（红色位表示当前卡片对应的位值）</div>
+      </div>
+      <div id="modalTableContainer">${tableHtml}</div>
+      <div class="close-hint">（点击任意处关闭）</div>
+    `;
+
+    modalOverlay.classList.add('show');
+  }
+
+  // 关闭弹窗
+  function closeModal() {
+    modalOverlay.classList.remove('show');
+  }
+
+  modalOverlay.addEventListener('click', closeModal);
+
 </script>
 
 </body>
