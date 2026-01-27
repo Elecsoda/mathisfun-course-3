@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>二进制灯泡演示</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            text-align: center;
+        }
+        .bulb {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #333;
+            margin: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .bulb.on {
+            background-color: #ffeb3b;
+        }
+        .bulb.off {
+            background-color: #e0e0e0;
+        }
+        .controls {
+            margin: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        /* 默认隐藏十进制结果 */
+        #decimalValue {
+            font-size: 24px;
+            margin: 20px;
+            display: none;
+        }
+        /* 默认隐藏显示二进制位（0 或 1） */
+        .bit-digit {
+            font-size: 16px;
+            margin-top: 5px;
+            display: none;
+        }
+        /* 默认隐藏位权，且位权显示在灯泡上方 */
+        .bit-weight {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>二进制灯泡演示</h1>
+        <!-- 灯泡区域 -->
+        <div id="bulbs"></div>
+        <!-- 十进制结果 -->
+        <div id="decimalValue">0</div>
+        <div class="controls">
+            <button onclick="changeBulbCount(1)">增加灯泡</button>
+            <button onclick="changeBulbCount(-1)">减少灯泡</button>
+            <button onclick="toggleAutoIncrement()">开始/停止自动演示</button>
+            <button onclick="resetAll()">重置</button>
+            <br/><br/>
+            <!-- 通过复选框控制显示内容 -->
+            <label>
+                <input type="checkbox" id="chkBitWeight" onchange="applyDisplayOptions()">
+                显示位权
+            </label>
+            <label>
+                <input type="checkbox" id="chkDecimal" onchange="applyDisplayOptions()">
+                显示十进制结果
+            </label>
+            <label>
+                <input type="checkbox" id="chkBinary" onchange="applyDisplayOptions()">
+                显示二进制结果
+            </label>
+        </div>
+    </div>
+
+    <script>
+        let bulbCount = 4;
+        let autoInterval = null;
+        
+        // 根据当前灯泡数量创建灯泡，每个灯泡包含：
+        // - 上方：位权（例如 ×8、×4……），默认隐藏
+        // - 中间：灯泡本身（点击切换状态）
+        // - 下方：二进制结果（0 或 1），默认隐藏
+        function createBulbs() {
+            const container = document.getElementById('bulbs');
+            container.innerHTML = '';
+            
+            // 从高位到低位排列，所以从 (bulbCount - 1) 到 0
+            for (let i = bulbCount - 1; i >= 0; i--) {
+                const bulbWrapper = document.createElement('div');
+                bulbWrapper.style.display = 'inline-block';
+                bulbWrapper.style.margin = '10px';
+                bulbWrapper.style.textAlign = 'center';
+                
+                // 位权，放在灯泡上方
+                const bitWeight = document.createElement('div');
+                bitWeight.className = 'bit-weight';
+                bitWeight.textContent = `×${Math.pow(2, i)}`;
+                
+                // 灯泡本身
+                const bulb = document.createElement('div');
+                bulb.className = 'bulb off';
+                bulb.dataset.value = Math.pow(2, i);
+                bulb.onclick = () => {
+                    toggleBulb(bulb);
+                };
+                
+                // 显示二进制结果（0 或 1），放在灯泡下方
+                const bitDigit = document.createElement('div');
+                bitDigit.className = 'bit-digit';
+                bitDigit.textContent = '0';
+                
+                bulbWrapper.appendChild(bitWeight);
+                bulbWrapper.appendChild(bulb);
+                bulbWrapper.appendChild(bitDigit);
+                container.appendChild(bulbWrapper);
+            }
+            updateDecimal();
+            applyDisplayOptions();
+        }
+
+        // 切换单个灯泡状态，并更新显示的二进制数字和十进制总值
+        function toggleBulb(bulb) {
+            bulb.classList.toggle('on');
+            bulb.classList.toggle('off');
+            updateDecimal();
+            // 如果处于自动演示状态，手动操作时则停止自动演示
+            if (autoInterval) {
+                clearInterval(autoInterval);
+                autoInterval = null;
+            }
+        }
+
+        // 遍历所有灯泡，根据状态更新二进制位（0/1）的显示，并计算十进制总和
+        function updateDecimal() {
+            let total = 0;
+            document.querySelectorAll('.bulb').forEach((bulb) => {
+                const digit = bulb.classList.contains('on') ? '1' : '0';
+                // 找到同一个 wrapper 内的二进制位显示元素
+                const digitElem = bulb.parentNode.querySelector('.bit-digit');
+                if (digitElem) {
+                    digitElem.textContent = digit;
+                }
+                if (bulb.classList.contains('on')) {
+                    total += parseInt(bulb.dataset.value);
+                }
+            });
+            document.getElementById('decimalValue').textContent = total;
+        }
+
+        // 改变灯泡数量（至少保留 1 个）
+        function changeBulbCount(delta) {
+            bulbCount = Math.max(1, bulbCount + delta);
+            createBulbs();
+        }
+
+        // 自动演示：每秒将当前数加 1（超出范围后归零）
+        function toggleAutoIncrement() {
+            if (!autoInterval) {
+                autoInterval = setInterval(() => {
+                    const current = parseInt(document.getElementById('decimalValue').textContent);
+                    const next = (current + 1) % Math.pow(2, bulbCount);
+                    updateBulbsFromDecimal(next);
+                }, 1000);
+            } else {
+                clearInterval(autoInterval);
+                autoInterval = null;
+            }
+        }
+
+        // 根据传入的十进制数更新所有灯泡状态，同时更新二进制显示
+        function updateBulbsFromDecimal(number) {
+            const binaryStr = number.toString(2).padStart(bulbCount, '0');
+            document.querySelectorAll('.bulb').forEach((bulb, index) => {
+                // binaryStr[0] 对应最高位，即左侧第一个灯泡
+                bulb.classList.toggle('on', binaryStr[index] === '1');
+                bulb.classList.toggle('off', binaryStr[index] === '0');
+            });
+            updateDecimal();
+        }
+
+        // 重置：将灯泡数量恢复为默认（4 个），停止自动演示
+        function resetAll() {
+            bulbCount = 4;
+            createBulbs();
+            if (autoInterval) {
+                clearInterval(autoInterval);
+                autoInterval = null;
+            }
+        }
+        
+        // 根据复选框状态设置各项显示（位权、二进制位、十进制结果）
+        function applyDisplayOptions() {
+            // 位权（显示在灯泡上方）
+            const showBitWeight = document.getElementById('chkBitWeight').checked;
+            document.querySelectorAll('.bit-weight').forEach(elem => {
+                elem.style.display = showBitWeight ? 'block' : 'none';
+            });
+            // 二进制结果（显示在灯泡下方）
+            const showBinary = document.getElementById('chkBinary').checked;
+            document.querySelectorAll('.bit-digit').forEach(elem => {
+                elem.style.display = showBinary ? 'block' : 'none';
+            });
+            // 十进制结果
+            const showDecimal = document.getElementById('chkDecimal').checked;
+            document.getElementById('decimalValue').style.display = showDecimal ? 'block' : 'none';
+        }
+        
+        // 初始化创建灯泡
+        createBulbs();
+    </script>
+</body>
+</html>
