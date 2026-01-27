@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级字符频率分析工具</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            margin: 0;
+            padding: 30px;
+            color: var(--primary-color);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+            font-size: 2.5em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        #inputText {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid var(--secondary-color);
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+            transition: all 0.3s ease;
+            margin: 10px 0;
+        }
+
+        .bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            transition: transform 0.2s ease;
+        }
+
+        .bar:hover {
+            transform: translateX(10px);
+        }
+
+        .bar-label {
+            width: 40px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary-color);
+            background: rgba(52, 152, 219, 0.1);
+            padding: 5px;
+            border-radius: 4px;
+            margin-right: 15px;
+        }
+
+        .bar-graph {
+            height: 28px;
+            background: linear-gradient(90deg, var(--secondary-color), #2980b9);
+            border-radius: 5px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            position: relative;
+            min-width: 2px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.85);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 1000;
+            white-space: nowrap;
+            transform: translateY(-50%);
+        }
+
+        .example-section {
+            margin-top: 30px;
+            border-top: 2px solid #eee;
+            padding-top: 20px;
+        }
+
+        .example-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .scale-control {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #scaleType {
+            padding: 8px;
+            border: 2px solid var(--secondary-color);
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .scale-legend {
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 高级字符分析工具</h1>
+        
+        <div class="controls">
+            <label>
+                <input type="checkbox" id="countSymbols" checked>
+                包含空格和标点
+            </label>
+            <button class="example-btn" onclick="loadExample()">加载密码示例</button>
+        </div>
+
+        <div class="scale-control">
+            <select id="scaleType" onchange="updateStatistics()">
+                <option value="actual">实际比例显示</option>
+                <option value="normalized">最大归一显示</option>
+                <!-- <option value="sqrt">显示模式3</option> -->
+            </select>
+            <span class="scale-legend" id="scaleLegend"></span>
+        </div>
+
+        <textarea id="inputText" placeholder="请输入要分析的文本..."></textarea>
+        <div id="statistics"></div>
+
+        <div class="example-section">
+            <h3>🔐 密码教学区</h3>
+            <div id="cipherInfo"></div>
+        </div>
+    </div>
+
+<script>
+    let tooltip = null;
+
+    // 创建工具提示
+    function createTooltip(text, x, y) {
+        if (!tooltip) {
+            tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            document.body.appendChild(tooltip);
+        }
+        tooltip.textContent = text;
+        tooltip.style.left = `${x + 15}px`;
+        tooltip.style.top = `${y}px`;
+        tooltip.style.display = 'block';
+    }
+
+    // 统计字符
+    function analyzeText(text) {
+        const countSymbols = document.getElementById('countSymbols').checked;
+        const charCount = {};
+        let total = 0;
+
+        for (const char of text) {
+            if (!countSymbols && (/\s|[^\p{L}]/u.test(char))) continue;
+            total++;
+            charCount[char] = (charCount[char] || 0) + 1;
+        }
+
+        const sortedData = Object.entries(charCount)
+            .sort(([,a], [,b]) => b - a)
+            .map(([char, count]) => ({ char, count }));
+
+        return { data: sortedData, total };
+    }
+
+    // 计算显示比例
+    function calculateDisplayPercentage(data, total, scaleType) {
+        if (data.length === 0) return [];
+        
+        const maxCount = data[0].count;
+        return data.map(item => {
+            const actual = total === 0 ? 0 : (item.count / total);
+            
+            switch(scaleType) {
+                case 'normalized':
+                    return ((item.count / maxCount) * 100).toFixed(2);
+                case 'sqrt':
+                    return (Math.sqrt(actual) * 100).toFixed(2);
+                default:
+                    return (actual * 100).toFixed(2);
+            }
+        });
+    }
+
+    // 渲染统计结果
+    function renderStatistics(data, total) {
+        const container = document.getElementById('statistics');
+        container.innerHTML = '';
+        
+        if (data.length === 0) {
+            container.innerHTML = '<p>暂无统计数据</p>';
+            return;
+        }
+
+        const scaleType = document.getElementById('scaleType').value;
+        const displayPercents = calculateDisplayPercentage(data, total, scaleType);
+
+        // 更新比例说明
+        document.getElementById('scaleLegend').innerHTML = {
+            actual: `（显示实际比例）`,
+            normalized: `（最大频率字符显示为100%）`,
+            sqrt: `（使用平方根缩放）`
+        }[scaleType];
+
+        data.forEach(({ char, count }, index) => {
+            const actualPercent = ((count / total) * 100).toFixed(2);
+            const displayPercent = displayPercents[index];
+
+            const barContainer = document.createElement('div');
+            barContainer.className = 'bar';
+
+            const barLabel = document.createElement('div');
+            barLabel.className = 'bar-label';
+            barLabel.textContent = char;
+            barContainer.appendChild(barLabel);
+
+            const barGraph = document.createElement('div');
+            barGraph.className = 'bar-graph';
+            barGraph.style.width = `${displayPercent}%`;
+
+            // 鼠标事件
+            barGraph.addEventListener('mousemove', (e) => {
+                createTooltip(
+                    `字符次数: ${count  }\n\n字符占比: ${actualPercent}%`, 
+                    e.pageX, 
+                    e.pageY
+                );
+            });
+
+            barGraph.addEventListener('mouseout', () => {
+                if (tooltip) tooltip.style.display = 'none';
+            });
+
+            barContainer.appendChild(barGraph);
+            container.appendChild(barContainer);
+        });
+    }
+
+    // 更新统计
+    function updateStatistics() {
+        const text = document.getElementById('inputText').value;
+        const { data, total } = analyzeText(text);
+        renderStatistics(data, total);
+    }
+
+    // 加载凯撒密码示例
+    function loadExample() {
+        const originalText = `Hi Bob
+Ok
+Let's meet at eight am
+Alice`;
+
+        // 凯撒加密（位移+3）
+        const encryptedText = originalText.split('').map(c => {
+            if (/[A-Za-z]/.test(c)) {
+                const base = c <= 'Z' ? 65 : 97;
+                return String.fromCharCode((c.charCodeAt(0) - base + 3) % 26 + base);
+            }
+            return c;
+        }).join('');
+
+        document.getElementById('inputText').value = encryptedText;
+        document.getElementById('cipherInfo').innerHTML = `
+            <p>🔒 加密文本：${encryptedText}</p>
+            <p>🔓 原始文本：${originalText}</p>
+            <p>🔑 加密方式：凯撒密码（位移+3）</p>
+            <p>💡 破解提示：高频字母'H'可能对应英语中的'E'</p>
+        `;
+        updateStatistics();
+    }
+
+    // 事件监听
+    document.getElementById('inputText').addEventListener('input', updateStatistics);
+    document.getElementById('countSymbols').addEventListener('change', updateStatistics);
+</script>
+</body>
+</html>
