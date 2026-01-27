@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>古代密码演示工具</title>
+  <!-- 引入 Tailwind CSS 进行快速美化 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 FontAwesome 图标 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    /* 自定义样式补充 */
+    body {
+      background-color: #f3f4f6; /* slate-100 */
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    
+    /* 隐藏滚动条但保留滚动功能 (Webkit) */
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* 结果文本区域样式 */
+    #outputText {
+      min-height: 40px;
+      word-break: break-all;
+    }
+    
+    /* 调整输入框在移动端的点击区域 */
+    select, input, button {
+      touch-action: manipulation;
+    }
+  </style>
+</head>
+<body class="text-slate-700 pb-4 flex flex-col min-h-screen">
+
+  <!-- 顶部标题栏 -->
+  <header class="bg-indigo-600 text-white p-2.5 shadow-md sticky top-0 z-20">
+    <div class="max-w-4xl mx-auto flex items-center justify-between">
+      <h1 class="text-sm md:text-lg font-bold flex items-center gap-2">
+        <i class="fa-solid fa-user-secret"></i> 古代密码工具
+      </h1>
+      <span class="text-[10px] bg-indigo-500 px-2 py-0.5 rounded opacity-90 font-mono">移位密码工具</span>
+    </div>
+  </header>
+
+  <!-- 主容器 -->
+  <main class="max-w-4xl mx-auto p-2 space-y-2 flex-grow w-full">
+
+    <!-- 说明卡片 (极简版) -->
+    <div class="bg-white px-3 py-1.5 rounded shadow-sm border border-slate-100 text-[11px] md:text-xs text-slate-500 flex justify-between items-center">
+      <div class="flex items-center gap-1.5">
+        <i class="fa-solid fa-circle-info text-indigo-500"></i>
+        <span>密码形式：斯巴达 / 栅栏 / 蛇形</span>
+      </div>
+    </div>
+
+    <!-- 输入区 -->
+    <div class="bg-white p-2 rounded shadow-sm border-t-2 border-indigo-500">
+      <div class="relative">
+        <textarea id="inputText" class="w-full h-16 p-2 text-sm border border-slate-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition resize-none placeholder:text-slate-400 leading-snug" placeholder="在此输入内容..."></textarea>
+      </div>
+    </div>
+
+    <!-- 紧凑控制面板 (Grid布局) -->
+    <div class="bg-white p-2.5 rounded shadow-sm border border-slate-200">
+      <!-- 两行 Grid，每行两列，比例 7:5 -->
+      <div class="grid grid-cols-12 gap-x-2 gap-y-2.5">
+        
+        <!-- 1. 密码类型 (占 7/12) -->
+        <div class="col-span-7">
+          <label for="cipherType" class="block text-[10px] font-bold text-slate-500 mb-0.5">密码类型</label>
+          <div class="relative">
+            <select id="cipherType" class="w-full h-8 pl-2 pr-6 text-xs bg-slate-50 border border-slate-300 rounded focus:border-indigo-500 outline-none appearance-none text-slate-700 font-medium">
+              <option value="scytale">斯巴达密码棒</option>
+              <option value="railFence">栅栏密码</option>
+              <option value="snake">蛇形密码</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+              <i class="fa-solid fa-caret-down text-[10px]"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 行数 (占 5/12) -->
+        <div class="col-span-5">
+          <label for="keyNumber" class="block text-[10px] font-bold text-slate-500 mb-0.5">行数 (Key)</label>
+          <div class="flex items-center">
+            <input type="number" id="keyNumber" value="4" min="2" class="w-full h-8 px-2 text-xs bg-slate-50 border border-slate-300 rounded focus:border-indigo-500 outline-none text-center font-mono font-bold text-indigo-600" />
+          </div>
+        </div>
+
+        <!-- 3. 空格处理 (占 7/12) -->
+        <div class="col-span-7">
+          <label for="spaceHandling" class="block text-[10px] font-bold text-slate-500 mb-0.5">空格处理</label>
+          <div class="relative">
+            <select id="spaceHandling" class="w-full h-8 pl-2 pr-6 text-xs bg-slate-50 border border-slate-300 rounded focus:border-indigo-500 outline-none appearance-none text-slate-700">
+              <option value="preserve">保留空格 (默认)</option>
+              <option value="·">变点 (·)</option>
+              <option value="*">变星 (*)</option>
+              <option value="#">变井 (#)</option>
+              <option value="□">变框 (□)</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+              <i class="fa-solid fa-caret-down text-[10px]"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 填充符号 (占 5/12) -->
+        <div class="col-span-5">
+          <label for="paddingSymbol" class="block text-[10px] font-bold text-slate-500 mb-0.5">填充(补齐)</label>
+          <div class="relative">
+            <select id="paddingSymbol" class="w-full h-8 pl-2 pr-5 text-xs bg-slate-50 border border-slate-300 rounded focus:border-indigo-500 outline-none appearance-none text-center font-mono">
+              <option value="·">·</option>
+              <option value="*">*</option>
+              <option value="#">#</option>
+              <option value="□">□</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-slate-500">
+              <i class="fa-solid fa-caret-down text-[10px]"></i>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 操作按钮组 -->
+    <div class="grid grid-cols-4 gap-2 pt-1">
+      <button id="encryptBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded shadow-sm text-xs md:text-sm font-medium transition active:scale-95">
+        加密
+      </button>
+      <button id="decryptBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded shadow-sm text-xs md:text-sm font-medium transition active:scale-95">
+        解密
+      </button>
+      <button id="copyBtn" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 py-2 rounded shadow-sm text-xs md:text-sm font-medium transition active:scale-95">
+        复制
+      </button>
+      <button id="clearBtn" class="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-2 rounded shadow-sm text-xs md:text-sm font-medium transition active:scale-95">
+        清空
+      </button>
+    </div>
+
+    <!-- 结果展示区 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+      <!-- 最终结果 -->
+      <div class="bg-white rounded shadow-sm overflow-hidden border border-slate-200">
+        <div class="bg-slate-50 px-3 py-1.5 border-b border-slate-200 flex justify-between items-center">
+          <h3 class="font-bold text-slate-600 text-xs"><i class="fa-solid fa-terminal mr-1"></i>结果</h3>
+        </div>
+        <div id="outputText" class="p-2 font-mono text-sm bg-white text-slate-800 whitespace-pre-wrap select-all max-h-40 overflow-y-auto leading-relaxed"></div>
+      </div>
+
+      <!-- 过程可视化 -->
+      <div class="bg-white rounded shadow-sm overflow-hidden border border-slate-200">
+        <div class="bg-slate-50 px-3 py-1.5 border-b border-slate-200">
+          <h3 class="font-bold text-slate-600 text-xs"><i class="fa-solid fa-table mr-1"></i>矩阵</h3>
+        </div>
+        <!-- 容器：允许横向滚动 -->
+        <div class="p-2 overflow-x-auto max-h-40" id="processTableContainer">
+          <div class="text-slate-300 text-center py-6 text-xs">
+            等待操作...
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 底部署名 -->
+  <footer class="text-center text-slate-400 text-[10px] py-4">
+    @孙维刚教育研究院
+  </footer>
+
+  <script>
+    // ===========================
+    //  工具函数 - 处理空格和填充
+    // ===========================
+    function processSpacing(text, spaceOption, replaceSymbol) {
+      if (spaceOption === "preserve") {
+        return text;
+      } else if (spaceOption === "replace") {
+        return text.replace(/ /g, replaceSymbol);
+      }
+      return text;
+    }
+
+    function padText(text, totalCells, paddingSymbol) {
+      while (text.length < totalCells) {
+        text += paddingSymbol;
+      }
+      return text;
+    }
+
+    // ===========================
+    //  一、斯巴达密码棒（Scytale）
+    // ===========================
+    function scytaleEncrypt(text, rows, paddingSymbol) {
+      const len = text.length;
+      const cols = Math.ceil(len / rows);
+      const totalCells = rows * cols;
+      const paddedText = padText(text, totalCells, paddingSymbol);
+
+      const table = [];
+      let index = 0;
+      for (let r = 0; r < rows; r++) {
+        const rowArr = [];
+        for (let c = 0; c < cols; c++) {
+          rowArr.push(paddedText[index++] || paddingSymbol);
+        }
+        table.push(rowArr);
+      }
+
+      let cipher = "";
+      for (let c = 0; c < cols; c++) {
+        for (let r = 0; r < rows; r++) {
+          cipher += table[r][c];
+        }
+      }
+      return { cipher, table };
+    }
+
+    function scytaleDecrypt(cipherText, rows, paddingSymbol) {
+      const len = cipherText.length;
+      const cols = Math.ceil(len / rows);
+      const totalCells = rows * cols;
+      const paddedCipher = padText(cipherText, totalCells, paddingSymbol);
+
+      const table = Array.from({ length: rows }, () =>
+        Array.from({ length: cols }, () => paddingSymbol)
+      );
+      let index = 0;
+      for (let c = 0; c < cols; c++) {
+        for (let r = 0; r < rows; r++) {
+          table[r][c] = paddedCipher[index++] || paddingSymbol;
+        }
+      }
+
+      let plainText = "";
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          plainText += table[r][c];
+        }
+      }
+
+      plainText = plainText.replace(new RegExp(paddingSymbol + "+$"), "");
+      return { plainText, table };
+    }
+
+    // ===========================
+    //  二、栅栏密码（Rail Fence）
+    // ===========================
+    function railFenceEncrypt(text, rows, paddingSymbol) {
+      const len = text.length;
+      const cols = Math.ceil(len / rows);
+      const totalCells = rows * cols;
+      const paddedText = padText(text, totalCells, paddingSymbol);
+
+      const table = Array.from({ length: rows }, () => []);
+      let index = 0;
+      for (let c = 0; c < cols; c++) {
+        for (let r = 0; r < rows; r++) {
+          table[r][c] = paddedText[index++] || paddingSymbol;
+        }
+      }
+
+      let cipher = "";
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          cipher += table[r][c];
+        }
+      }
+      return { cipher, table };
+    }
+
+    function railFenceDecrypt(cipherText, rows, paddingSymbol) {
+      const len = cipherText.length;
+      const cols = Math.ceil(len / rows);
+      const totalCells = rows * cols;
+      const paddedCipher = padText(cipherText, totalCells, paddingSymbol);
+
+      const table = Array.from({ length: rows }, () =>
+        Array.from({ length: cols }, () => paddingSymbol)
+      );
+      let index = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          table[r][c] = paddedCipher[index++] || paddingSymbol;
+        }
+      }
+
+      let plainText = "";
+      for (let c = 0; c < cols; c++) {
+        for (let r = 0; r < rows; r++) {
+          plainText += table[r][c];
+        }
+      }
+
+      plainText = plainText.replace(new RegExp(paddingSymbol + "+$"), "");
+      return { plainText, table };
+    }
+
+    // ===========================
+    //  三、蛇形密码（Snake Cipher）
+    // ===========================
+    function snakeEncrypt(text, rows, paddingSymbol) {
+      const len = text.length;
+      const cols = Math.ceil(len / rows);
+      const totalCells = rows * cols;
+      const paddedText = padText(text, totalCells, paddingSymbol);
+
+      const table = [];
+      let index = 0;
+      for (let r = 0; r < rows; r++) {
+        const rowArr = [];
+        for (let c = 0; c < cols; c++) {
+          rowArr.push(paddedText[index++] || paddingSymbol);
+        }
+        if (r % 2 === 1) {
+          rowArr.reverse();
+        }
+        table.push(rowArr);
+      }
+
+      let cipher = "";
+      for (let c = 0; c < cols; c++) {
+        if (c % 2 === 0) {
+          for (let r = 0; r < rows; r++) {
+            cipher += table[r][c];
+          }
+        } else {
+          for (let r = rows - 1; r >= 0; r--) {
+            cipher += table[r][c];
+          }
+        }
+      }
+      return { cipher, table };
+    }
+
+    function snakeDecrypt(cipherText, rows, paddingSymbol) {
+      const len = cipherText.length;
+      const cols = Math.ceil(len / rows);
+      const totalCells = rows * cols;
+      const paddedCipher = padText(cipherText, totalCells, paddingSymbol);
+
+      const table = Array.from({ length: rows }, () =>
+        Array.from({ length: cols }, () => paddingSymbol)
+      );
+      let index = 0;
+      for (let c = 0; c < cols; c++) {
+        if (c % 2 === 0) {
+          for (let r = 0; r < rows; r++) {
+            table[r][c] = paddedCipher[index++] || paddingSymbol;
+          }
+        } else {
+          for (let r = rows - 1; r >= 0; r--) {
+            table[r][c] = paddedCipher[index++] || paddingSymbol;
+          }
+        }
+      }
+
+      let plainText = "";
+      for (let r = 0; r < rows; r++) {
+        let rowArr = [...table[r]];
+        if (r % 2 === 1) {
+          rowArr.reverse();
+        }
+        plainText += rowArr.join('');
+      }
+
+      plainText = plainText.replace(new RegExp(paddingSymbol + "+$"), "");
+      return { plainText, table };
+    }
+
+    // ===========================
+    //  四、页面交互逻辑
+    // ===========================
+    const inputTextArea = document.getElementById("inputText");
+    const cipherTypeSelect = document.getElementById("cipherType");
+    const keyNumberInput = document.getElementById("keyNumber");
+    const encryptBtn = document.getElementById("encryptBtn");
+    const decryptBtn = document.getElementById("decryptBtn");
+    const processTableContainer = document.getElementById("processTableContainer");
+    const outputText = document.getElementById("outputText");
+    const copyBtn = document.getElementById("copyBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const spaceHandlingSelect = document.getElementById("spaceHandling"); // 新的合并 Select
+    const paddingSymbolSelect = document.getElementById("paddingSymbol");
+
+    // 获取空格处理选项 (重构：从单一 Select 获取)
+    function getSpaceOption() {
+      const val = spaceHandlingSelect.value;
+      if (val === "preserve") {
+        return { option: "preserve", symbol: " " };
+      } else {
+        return { option: "replace", symbol: val };
+      }
+    }
+
+    function getPaddingSymbol() {
+      return paddingSymbolSelect.value || "·";
+    }
+
+    // 【加密】按钮事件
+    encryptBtn.addEventListener("click", () => {
+      const rawText = inputTextArea.value;
+      if (!rawText) {
+        alert("请先输入要加密的内容！");
+        return;
+      }
+
+      const { option, symbol: spaceSymbol } = getSpaceOption();
+      const text = processSpacing(rawText, option, spaceSymbol);
+      const rows = parseInt(keyNumberInput.value, 10);
+      const cipherType = cipherTypeSelect.value;
+      const paddingSymbol = getPaddingSymbol();
+
+      if (rows < 2) {
+        alert("行数不能小于2！");
+        return;
+      }
+
+      let result = "";
+      let tableData = [];
+
+      if (cipherType === "scytale") {
+        const { cipher, table } = scytaleEncrypt(text, rows, paddingSymbol);
+        result = cipher;
+        tableData = table;
+      } else if (cipherType === "railFence") {
+        const { cipher, table } = railFenceEncrypt(text, rows, paddingSymbol);
+        result = cipher;
+        tableData = table;
+      } else if (cipherType === "snake") {
+        const { cipher, table } = snakeEncrypt(text, rows, paddingSymbol);
+        result = cipher;
+        tableData = table;
+      }
+
+      outputText.textContent = result;
+      
+      let caption = "";
+      if (cipherType === "scytale") {
+        caption = "斯巴达: 行优先写 → 列优先读";
+      } else if (cipherType === "railFence") {
+        caption = "栅栏: 列优先写 → 行优先读";
+      } else if (cipherType === "snake") {
+        caption = "蛇形: 蛇形写入 → 列交替读取";
+      }
+      renderTable(tableData, caption);
+    });
+
+    // 【解密】按钮事件
+    decryptBtn.addEventListener("click", () => {
+      const rawText = inputTextArea.value;
+      if (!rawText) {
+        alert("请先输入要解密的内容！");
+        return;
+      }
+
+      const { option, symbol: spaceSymbol } = getSpaceOption();
+      const text = processSpacing(rawText, option, spaceSymbol);
+      const rows = parseInt(keyNumberInput.value, 10);
+      const cipherType = cipherTypeSelect.value;
+      const paddingSymbol = getPaddingSymbol();
+
+      if (rows < 2) {
+        alert("行数不能小于2！");
+        return;
+      }
+
+      let result = "";
+      let tableData = [];
+
+      if (cipherType === "scytale") {
+        const { plainText, table } = scytaleDecrypt(text, rows, paddingSymbol);
+        result = plainText;
+        tableData = table;
+      } else if (cipherType === "railFence") {
+        const { plainText, table } = railFenceDecrypt(text, rows, paddingSymbol);
+        result = plainText;
+        tableData = table;
+      } else if (cipherType === "snake") {
+        const { plainText, table } = snakeDecrypt(text, rows, paddingSymbol);
+        result = plainText;
+        tableData = table;
+      }
+
+      outputText.textContent = result;
+
+      let caption = "";
+      if (cipherType === "scytale") {
+        caption = "斯巴达: 列优先写 → 行优先读";
+      } else if (cipherType === "railFence") {
+        caption = "栅栏: 行优先写 → 列优先读";
+      } else if (cipherType === "snake") {
+        caption = "蛇形: 列交替写入 → 蛇形读取";
+      }
+      renderTable(tableData, caption);
+    });
+
+    // 【复制结果】按钮事件
+    copyBtn.addEventListener("click", () => {
+      const textToCopy = outputText.textContent;
+      if (!textToCopy) {
+        alert("当前没有可以复制的文本！");
+        return;
+      }
+      navigator.clipboard.writeText(textToCopy)
+        .then(() => {
+          const originalText = copyBtn.innerHTML;
+          copyBtn.innerHTML = '<i class="fa-solid fa-check text-green-500"></i>';
+          setTimeout(() => {
+            copyBtn.innerHTML = originalText;
+          }, 1500);
+        })
+        .catch((err) => alert("复制失败：" + err));
+    });
+
+    // 【清空输入】按钮事件
+    clearBtn.addEventListener("click", () => {
+      inputTextArea.value = "";
+      outputText.textContent = "";
+      processTableContainer.innerHTML = '<div class="text-slate-300 text-center py-6 text-xs">等待操作...</div>';
+    });
+
+    /**
+     * 将二维数组渲染为表格
+     */
+    function renderTable(tableData, caption) {
+      if (!tableData || tableData.length === 0) {
+        processTableContainer.innerHTML = "<p>无可显示的过程。</p>";
+        return;
+      }
+
+      // 生成带样式的表格
+      let html = `<div class="mb-2 text-center text-[10px] font-semibold text-indigo-600 bg-indigo-50 inline-block px-2 py-0.5 rounded shadow-sm border border-indigo-100">${caption}</div>`;
+      html += `<table class="w-full border-collapse border border-slate-200 text-xs">`;
+      
+      tableData.forEach((row, rowIndex) => {
+        // 隔行变色逻辑
+        const bgClass = rowIndex % 2 === 0 ? "bg-white" : "bg-slate-50";
+        html += `<tr class="${bgClass}">`;
+        row.forEach(cell => {
+          html += `<td class="border border-slate-200 p-1 text-center min-w-[24px] font-mono text-slate-700">${cell || " "}</td>`;
+        });
+        html += "</tr>";
+      });
+      html += "</table>";
+
+      processTableContainer.innerHTML = html;
+    }
+  </script>
+</body>
+</html>
