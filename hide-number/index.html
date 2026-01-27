@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>找出隐藏信息</title>
+  <style>
+    /* 页面整体样式 */
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f4f4f4;
+      font-family: 'Microsoft YaHei', sans-serif;
+    }
+
+    /* 外部容器：让内容居中并添加白底、阴影 */
+    .tool-container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: #ffffff;
+      padding: 20px 30px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+
+    h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    /* 输入框和按钮区域 */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+
+    label {
+      font-size: 14px;
+      margin-right: 4px;
+    }
+
+    input[type="number"] {
+      width: 60px;
+      height: 32px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      text-align: center;
+      outline: none;
+      font-size: 18px;
+    }
+
+    /* 按钮样式 */
+    button {
+      padding: 8px 16px;
+      font-size: 14px;
+      color: #fff;
+      background: #3498db;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      outline: none;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    button:disabled {
+      background: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    /* 表格样式 */
+    table {
+      margin: 0 auto;
+      border-collapse: separate;
+      border-spacing: 0;
+      width: auto;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      table-layout: fixed;  /* 固定表格布局，让单元格强制相等宽度 */
+    }
+
+    /* 单元格：固定为正方形 */
+    td {
+      width: 50px;       /* 根据需要可修改 */
+      height: 50px;      /* 根据需要可修改 */
+      padding: 0;        /* 去掉默认内边距以便正方形更好看 */
+      text-align: center;
+      vertical-align: middle;
+      border: none;
+    }
+
+    /* 隔行变色 */
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+
+    /* 鼠标悬停行高亮 */
+    tr:hover {
+      background: #f2f7fb;
+    }
+
+    /* 隐藏格的样式 */
+    .hidden-cell {
+      background-color: #ffeaa7 !important; /* 柔和的黄 */
+      cursor: pointer;
+      user-select: none;
+    }
+
+    /* 放在网格中的文本框 */
+    table input[type="text"] {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 20px;
+    }
+    table input[type="text"]:focus {
+      background: #fff9c4; /* 聚焦时背景微微高亮 */
+    }
+
+    /* 让“点击显示”文字居中 */
+    .hidden-cell::selection {
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+
+<div class="tool-container">
+  <h2>找出隐藏信息</h2>
+
+  <div class="controls">
+    <label for="rows">行数:</label>
+    <input type="number" id="rows" min="2" value="5">
+    
+    <label for="cols">列数:</label>
+    <input type="number" id="cols" min="2" value="5">
+    
+    <button id="generateBtn">生成网格</button>
+    <button id="randomFillBtn" disabled>随机填充</button>
+    <button id="hideRandomBtn" disabled>隐藏随机格</button>
+  </div>
+
+  <div id="tableContainer"></div>
+</div>
+
+<script>
+  // 全局存储表格元素，用于后续操作
+  let currentTable = null;
+
+  // 生成网格按钮点击事件
+  document.getElementById('generateBtn').addEventListener('click', createGrid);
+  // 随机填充按钮点击事件
+  document.getElementById('randomFillBtn').addEventListener('click', randomFill);
+  // 隐藏随机格按钮点击事件
+  document.getElementById('hideRandomBtn').addEventListener('click', hideRandomCell);
+
+  /**
+   * 生成网格
+   */
+  function createGrid() {
+    const rowCount = parseInt(document.getElementById('rows').value, 10);
+    const colCount = parseInt(document.getElementById('cols').value, 10);
+
+    if (isNaN(rowCount) || isNaN(colCount) || rowCount < 1 || colCount < 1) {
+      alert("请输入合法的行数和列数！");
+      return;
+    }
+
+    // 先清空容器
+    const container = document.getElementById('tableContainer');
+    container.innerHTML = '';
+
+    // 创建表格
+    const table = document.createElement('table');
+
+    for (let r = 0; r < rowCount; r++) {
+      const tr = document.createElement('tr');
+
+      for (let c = 0; c < colCount; c++) {
+        const td = document.createElement('td');
+        // 放置一个文本框
+        const input = document.createElement('input');
+        input.type = "text";
+
+        td.appendChild(input);
+        tr.appendChild(td);
+      }
+      table.appendChild(tr);
+    }
+
+    container.appendChild(table);
+    currentTable = table;
+
+    // 使随机填充按钮、隐藏随机格按钮可用
+    document.getElementById('randomFillBtn').disabled = false;
+    document.getElementById('hideRandomBtn').disabled = false;
+  }
+
+  /**
+   * 随机填充函数
+   */
+  function randomFill() {
+    if (!currentTable) return;
+
+    const rows = currentTable.rows.length;
+    const cols = currentTable.rows[0].cells.length;
+
+    // 从第 2 行、第 2 列开始随机填充 (索引1起)
+    for (let r = 1; r < rows; r++) {
+      for (let c = 1; c < cols; c++) {
+        const cell = currentTable.rows[r].cells[c];
+        const input = cell.querySelector('input');
+        if (input) {
+          input.value = Math.random() < 0.5 ? '0' : '1';
+        }
+      }
+    }
+  }
+
+  /**
+   * 隐藏随机格函数
+   */
+  function hideRandomCell() {
+    if (!currentTable) return;
+
+    const rows = currentTable.rows.length;
+    const cols = currentTable.rows[0].cells.length;
+
+    // 收集所有可随机隐藏的单元格(除第一行、第一列)
+    const candidateCells = [];
+    for (let r = 1; r < rows; r++) {
+      for (let c = 1; c < cols; c++) {
+        candidateCells.push(currentTable.rows[r].cells[c]);
+      }
+    }
+
+    if (candidateCells.length === 0) {
+      alert("没有可隐藏的单元格");
+      return;
+    }
+
+    // 随机选择一个
+    const randomIndex = Math.floor(Math.random() * candidateCells.length);
+    const targetCell = candidateCells[randomIndex];
+    const input = targetCell.querySelector('input');
+    if (!input) return;
+
+    // 如果已经处于隐藏状态，先恢复
+    unhideCell(targetCell);
+
+    // 记录原始值
+    const originalValue = input.value;
+    // 清空单元格内容
+    targetCell.innerHTML = '';
+    // 给单元格附加 data 属性，存放原始值
+    targetCell.dataset.originalValue = originalValue;
+    // 标记单元格已隐藏
+    targetCell.classList.add('hidden-cell');
+    targetCell.textContent = '点击显示';
+
+    // 点击时显示/隐藏
+    targetCell.addEventListener('click', toggleCell, { once: false });
+  }
+
+  /**
+   * 取消隐藏
+   */
+  function unhideCell(cell) {
+    if (!cell.classList.contains('hidden-cell')) return;
+
+    // 移除类、移除事件监听
+    cell.classList.remove('hidden-cell');
+    cell.removeEventListener('click', toggleCell);
+
+    // 还原为可编辑输入框
+    const originalValue = cell.dataset.originalValue;
+    cell.innerHTML = '';
+    const input = document.createElement('input');
+    input.type = "text";
+    input.value = originalValue;
+    cell.appendChild(input);
+
+    // 移除保存的 data
+    cell.removeAttribute('data-original-value');
+  }
+
+  /**
+   * 隐藏单元格的显示/隐藏切换
+   */
+  function toggleCell(e) {
+    const cell = e.currentTarget;
+    if (cell.textContent === '点击显示') {
+      cell.textContent = cell.dataset.originalValue;
+    } else {
+      cell.textContent = '点击显示';
+    }
+  }
+</script>
+
+</body>
+</html>
