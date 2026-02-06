@@ -16,14 +16,14 @@
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      overscroll-behavior: none; /* 防止手机端下拉刷新效果干扰 */
+      overscroll-behavior: none;
     }
 
     h1 {
       color: #444;
       margin-top: 20px;
       margin-bottom: 10px;
-      font-size: 1.5rem; /* 手机端标题稍微调小 */
+      font-size: 1.5rem;
     }
 
     /* 容器布局 */
@@ -31,16 +31,15 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      width: 95%;
-      max-width: 1400px;
-      margin: 10px auto; /* 减小边距 */
-      padding: 15px;
+      width: 98%; /* 增加宽度利用率 */
+      max-width: 1600px; /* 允许更宽的显示 */
+      margin: 10px auto;
+      padding: 10px;
       background-color: #fff;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       border-radius: 8px;
     }
 
-    /* 使用说明样式 */
     .instructions {
       text-align: left;
       margin-bottom: 15px;
@@ -58,7 +57,6 @@
       font-weight: normal;
     }
 
-    /* 文件输入和画布区域 */
     .top-section {
       display: flex;
       flex-direction: column;
@@ -66,7 +64,6 @@
       width: 100%;
     }
 
-    /* 文件输入样式 */
     .file-input {
       margin-bottom: 15px;
       width: 100%;
@@ -81,25 +78,23 @@
       transition: border-color 0.3s;
       width: 100%;
       max-width: 300px;
-      box-sizing: border-box; /* 确保不撑破 */
+      box-sizing: border-box;
     }
 
-    /* 画布样式 */
     .canvas-container {
       position: relative;
       display: flex;
       justify-content: center;
       align-items: center;
       width: 100%;
-      overflow: hidden; /* 防止画布溢出 */
+      overflow: hidden;
       user-select: none;
-      touch-action: none; /* 关键：防止触摸滚动 */
-      background-color: #eee; /* 给个背景色，方便看边界 */
+      touch-action: none;
+      background-color: #eee;
       border-radius: 8px;
     }
 
     canvas {
-      /* 移除边框，改用容器控制，或者保持 */
       border: 1px solid #888;
       cursor: crosshair;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -108,7 +103,6 @@
       display: block;
     }
 
-    /* 控制按钮样式 */
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -119,18 +113,18 @@
     }
 
     .controls button {
-      padding: 12px 10px; /* 增加点击区域高度，适合手指 */
+      padding: 12px 10px;
       font-size: 13px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       transition: background-color 0.3s, transform 0.2s;
-      flex: 1 0 45%; /* 手机上一行两个 */
+      flex: 1 0 45%;
       max-width: 150px;
     }
 
     .controls button:active:not(:disabled) {
-      transform: scale(0.98); /* 更有按压感 */
+      transform: scale(0.98);
     }
 
     .controls button:disabled {
@@ -145,7 +139,7 @@
     #saveChangesBtn { background-color: #2196f3; color: white; }
     #clearSelection { background-color: #f44336; color: white; }
 
-    /* 像素矩阵样式 */
+    /* --- 像素矩阵样式 --- */
     .matrix-section {
       width: 100%;
       position: relative;
@@ -159,17 +153,16 @@
 
     .matrix-container {
       width: 100%;
-      /* 关键：防止在矩阵上滑动时触发页面滚动，允许流畅拖选 */
       touch-action: none; 
     }
 
     .matrix {
       display: grid;
-      gap: 1px;
+      gap: 0;
       margin: 0 auto;
       user-select: none;
       width: 100%;
-      background-color: #ccc; /* 缝隙颜色 */
+      background-color: #ccc;
       border: 1px solid #ccc;
     }
 
@@ -178,85 +171,124 @@
       text-align: center;
       cursor: pointer;
       box-sizing: border-box;
-      border-radius: 0;
+      border: 0.5px solid #ddd;
       
-      /* 布局设置 */
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       
-      /* 保持正方形 */
       aspect-ratio: 1 / 1; 
       position: relative;
-      
-      /* 字体设置 */
-      font-size: 11px;
-      line-height: 1.1;
-      color: #333;
       overflow: hidden;
+      padding: 0;
+    }
+
+    .matrix div .content-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
     }
 
     .matrix div span {
       display: block;
       white-space: nowrap;
+      font-family: 'Arial Narrow', sans-serif;
+      font-weight: 500;
+      color: #333; /* 默认文字颜色 */
     }
 
-    /* 动态样式类 - 根据格子数量调整 */
+    /* --- 密度适配 --- */
     
-    .matrix.medium-density div {
-      font-size: 9px;
+    /* 默认/低密度 */
+    .matrix div span {
+        font-size: 11px;
+        line-height: 1.2;
     }
 
-    .matrix.high-density div {
-      font-size: 10px;
+    /* 中等密度 (>12列) */
+    .matrix.medium-density div span {
+        font-size: 10px;
+        line-height: 1;
+        letter-spacing: -0.5px;
     }
-    
+
+    /* 高密度 (>25列) */
     .matrix.high-density div .content-wrapper {
-        transform: scale(0.85);
-        transform-origin: center;
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        transform: scale(0.9);
+        width: 111%;
+        height: 111%;
+        margin-left: -5.5%;
+        margin-top: -5.5%;
+    }
+    .matrix.high-density div span {
+        font-size: 10px;
+        line-height: 0.9;
+        letter-spacing: -1px;
     }
     
-    /* 手机端超高密度优化：如果格子太小，进一步缩小 */
+    /* 超高密度 (>40列) */
     .matrix.super-density div .content-wrapper {
-        transform: scale(0.60); 
-        width: 160%; 
-        margin-left: -30%; 
+        transform: scale(0.65);
+        transform-origin: center center;
+        width: 154%; 
+        height: 154%;
+        margin-left: -27%;
+        margin-top: -27%;
     }
 
-    /* 选中和交互样式 */
-    .matrix div.selected {
-      background-color: #007bff !important;
-      color: #fff;
+    .matrix.super-density div span {
+        font-size: 12px; 
+        line-height: 0.85; 
+        letter-spacing: -1px;
+        font-weight: bold;
     }
+
+    /* --- 选中和交互样式 (加深背景色，保持黑色文字) --- */
     
-    .matrix div.selected .content-wrapper {
-        color: #fff;
+    /* 1. 选中状态：蓝色背景 (加深) */
+    .matrix div.selected {
+      background-color: #64b5f6 !important; /* 蓝色 */
+      border-color: #2196f3 !important;
+    }
+    /* 保持文字黑色 */
+    .matrix div.selected .content-wrapper span,
+    .matrix div.selected span {
+        color: #000 !important; 
+        font-weight: bold;
     }
 
+    /* 2. 奇数高亮状态：红色背景 (加深) */
     .matrix div.odd {
-      background-color: #e91e63;
-      color: #fff;
+      background-color: #e57373 !important; /* 红色 */
+      border-color: #f44336 !important;
+    }
+    /* 保持文字黑色 */
+    .matrix div.odd .content-wrapper span,
+    .matrix div.odd span {
+        color: #000 !important;
+        font-weight: bold;
     }
 
+    /* 3. 同时选中且为奇数：紫色背景 (加深) */
     .matrix div.selected.odd {
-      background-color: #c2185b !important;
+      background-color: #ba68c8 !important; /* 紫色 */
+      border-color: #9c27b0 !important;
     }
 
-    /* 放大镜样式 - 优化手机端显示 */
+    /* 放大镜样式 */
     #magnifier {
         position: fixed;
         display: none;
         background: rgba(0, 0, 0, 0.9);
         color: white;
         padding: 8px 12px;
-        border-radius: 8px;
+        border-radius: 6px;
         pointer-events: none;
-        z-index: 2000; /* 确保在最上层 */
+        z-index: 2000;
         font-size: 13px;
         font-family: monospace;
         line-height: 1.5;
@@ -279,25 +311,17 @@
     /* 响应式设计 */
     @media (max-width: 600px) {
       .container {
-        width: 100%;
-        margin: 0;
-        border-radius: 0;
-        box-shadow: none;
-        padding: 10px;
+        padding: 5px;
       }
-      
       .controls button {
-        padding: 12px 5px; /* 稍微减小内边距防止文字换行 */
-        font-size: 12px;
+        flex: 1 0 40%;
       }
-
-      /* 手机端进一步缩小字体 */
-      .matrix div {
-          font-size: 8px;
-      }
-      
-      .instructions h4 {
-        font-size: 13px;
+      .matrix.super-density div .content-wrapper {
+          transform: scale(0.5); 
+          width: 200%;
+          height: 200%;
+          margin-left: -50%;
+          margin-top: -50%;
       }
     }
   </style>
@@ -305,12 +329,10 @@
 <body>
   <h1>图里藏着什么秘密？</h1>
   <div class="container">
-    <!-- 使用说明 -->
     <div class="instructions">
-      <h4>提示：图片中框选位置后，会出现像素值矩阵。点击或拖动选择像素点。</h4>
+      <h4>提示：图片中框选位置后，会出现像素值矩阵。点击或滑动选择像素点。</h4>
     </div>
 
-    <!-- 文件输入和画布区域 -->
     <div class="top-section">
       <div class="file-input">
         <input type="file" id="imageInput" accept="image/*">
@@ -320,7 +342,6 @@
       </div>
     </div>
 
-    <!-- 控制按钮 -->
     <div class="controls">
       <button id="clearLsb" disabled>末位清零</button>
       <button id="addOneBtn" disabled>选中像素加1</button>
@@ -329,16 +350,14 @@
       <button id="clearSelection" disabled>清除选择</button>
     </div>
 
-    <!-- 像素矩阵 -->
     <div class="matrix-section">
       <h2>框选区域的像素矩阵</h2>
-      <div class="matrix-container">
+      <div class="matrix-container" id="matrixContainer">
         <div id="matrix" class="matrix"></div>
       </div>
     </div>
   </div>
 
-  <!-- 放大镜元素 -->
   <div id="magnifier"></div>
 
   <script>
@@ -353,26 +372,25 @@
     const highlightOddBtn = document.getElementById("highlightOddBtn");
     const magnifier = document.getElementById("magnifier");
 
-    let imageData = null; // 原始图片数据
-    let selection = null; // 当前选中区域
-    let isSelecting = false; // 是否在框选中
+    let imageData = null;
+    let selection = null;
+    let isSelecting = false;
     let startX, startY;
-    let selectedCells = new Set(); // 记录被选中的像素格索引
-    let isDraggingMatrix = false; // 是否在拖动像素矩阵选择
+    let selectedCells = new Set();
+    
+    let isPainting = false; 
+    let paintTargetState = true; 
+    let lastPaintedIndex = -1; 
 
     const MAX_SELECTION_SIZE = 50; 
 
-    // 加载图片函数
     function loadImage(src) {
       const img = new Image();
       img.onload = () => {
-        // 简单的自适应：如果图片太大，在手机上可能显示不全，这里不做强制压缩分辨率，依赖CSS显示
-        // 但为了操作体验，重置画布大小
         canvas.width = img.width;
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
         imageData = ctx.getImageData(0, 0, img.width, img.height);
-        
         resetUI();
       };
       img.onerror = () => {
@@ -406,7 +424,6 @@
       reader.readAsDataURL(file);
     });
 
-    // 末位清零
     clearLsbBtn.addEventListener("click", () => {
       if (!imageData) return;
       const data = imageData.data;
@@ -423,7 +440,6 @@
       saveChangesBtn.disabled = false;
     });
 
-    // 框选功能
     canvas.addEventListener("pointerdown", (event) => {
       if (!imageData || !event.isPrimary) return;
       
@@ -445,7 +461,7 @@
       clearSelectionBtn.disabled = true;
       
       ctx.putImageData(imageData, 0, 0);
-      matrixContainer.innerHTML = ""; // 清空矩阵，避免视觉干扰
+      matrixContainer.innerHTML = ""; 
     });
 
     canvas.addEventListener("pointermove", (event) => {
@@ -492,7 +508,6 @@
         clearSelectionBtn.disabled = false;
         addOneBtn.disabled = false;
         highlightOddBtn.disabled = false;
-        // 移动端体验：框选完自动滚动到矩阵区域
         if (window.innerWidth <= 600) {
             matrixContainer.scrollIntoView({ behavior: "smooth", block: "start" });
         }
@@ -525,7 +540,6 @@
       }
     }
 
-    // 显示像素矩阵
     function showMatrix() {
       if (!selection || !imageData) return;
 
@@ -581,44 +595,7 @@
           div.dataset.b = b;
           div.dataset.x = x;
           div.dataset.y = y;
-          
-          // 优化事件处理，支持 Pointer Events 统一处理鼠标和触摸
-          div.addEventListener("pointerdown", (e) => {
-            // 防止默认触摸行为（如长按菜单）
-            // e.preventDefault(); // 注释掉，否则click可能不触发，交给css touch-action
-            isDraggingMatrix = true;
-            toggleSelect(div, index);
-            div.setPointerCapture(e.pointerId); // 捕获指针，确保滑动不出界也能响应
-            showMagnifier(e, r, g, b, x, y);
-          });
-          
-          div.addEventListener("pointerenter", (e) => {
-            if (isDraggingMatrix) {
-              // 检查按键状态，如果是鼠标未按键则不选中，触摸屏始终有效
-              if (e.pointerType === 'mouse' && e.buttons === 0) return;
-              toggleSelect(div, index);
-            }
-            showMagnifier(e, r, g, b, x, y);
-          });
-
-          div.addEventListener("pointermove", (e) => {
-             if (e.pointerType !== 'mouse' && isDraggingMatrix) {
-                // 触摸移动时，pointerenter 可能不准确，这里主要更新放大镜
-                // 真正的高级触摸拖选通常需要 elementFromPoint，但 pointerenter 在 setPointerCapture 释放后可能无法跨元素触发
-                // 简单方案：保持当前逻辑，但确保放大镜跟随
-             }
-             updateMagnifierPosition(e);
-          });
-
-          div.addEventListener("pointerleave", () => {
-             hideMagnifier();
-          });
-          
-          div.addEventListener("pointerup", (e) => {
-            isDraggingMatrix = false;
-            div.releasePointerCapture(e.pointerId);
-            hideMagnifier();
-          });
+          div.classList.add('matrix-cell');
           
           fragment.appendChild(div);
         }
@@ -626,9 +603,87 @@
       matrixContainer.appendChild(fragment);
     }
     
+    matrixContainer.addEventListener("pointerdown", (e) => {
+        const target = e.target.closest('.matrix-cell');
+        if (!target) return;
+
+        e.preventDefault(); 
+        
+        isPainting = true;
+        const index = parseInt(target.dataset.index);
+        
+        if (selectedCells.has(index)) {
+            paintTargetState = false; 
+        } else {
+            paintTargetState = true; 
+        }
+        
+        lastPaintedIndex = -1; 
+        applyPaint(target); 
+        
+        showMagnifier(e, target.dataset.r, target.dataset.g, target.dataset.b, target.dataset.x, target.dataset.y);
+    });
+
+    window.addEventListener("pointermove", (e) => {
+        if (!isPainting) {
+            if (e.pointerType === 'mouse') {
+                const target = e.target.closest('.matrix-cell');
+                if (target) {
+                    showMagnifier(e, target.dataset.r, target.dataset.g, target.dataset.b, target.dataset.x, target.dataset.y);
+                    return;
+                }
+            }
+            hideMagnifier();
+            return;
+        }
+
+        e.preventDefault();
+
+        const targetElement = document.elementFromPoint(e.clientX, e.clientY);
+        if (targetElement) {
+            const targetCell = targetElement.closest('.matrix-cell');
+            if (targetCell) {
+                applyPaint(targetCell);
+                showMagnifier(e, targetCell.dataset.r, targetCell.dataset.g, targetCell.dataset.b, targetCell.dataset.x, targetCell.dataset.y);
+            }
+        }
+        
+        updateMagnifierPosition(e);
+    }, { passive: false });
+
+    window.addEventListener("pointerup", () => {
+        isPainting = false;
+        lastPaintedIndex = -1;
+        hideMagnifier();
+    });
+    
+    window.addEventListener("pointercancel", () => {
+        isPainting = false;
+        hideMagnifier();
+    });
+
+    function applyPaint(cell) {
+        const index = parseInt(cell.dataset.index);
+        
+        if (index === lastPaintedIndex) return;
+        
+        lastPaintedIndex = index;
+        
+        if (paintTargetState) {
+            if (!selectedCells.has(index)) {
+                selectedCells.add(index);
+                cell.classList.add("selected");
+            }
+        } else {
+            if (selectedCells.has(index)) {
+                selectedCells.delete(index);
+                cell.classList.remove("selected");
+            }
+        }
+    }
+
     function showMagnifier(e, r, g, b, x, y) {
-        // 移动端触摸时如果不传 r,g,b (如 pointermove 触发)，需要从 dataset 获取吗？
-        // 现在的逻辑是 showMagnifier 必须由 div 触发并传递数据
+        if (r === undefined) return;
         const colorPreview = `<span class="color-preview" style="background-color: rgb(${r},${g},${b})"></span>`;
         magnifier.innerHTML = `
             <strong>Pos: (${x}, ${y})</strong><br>
@@ -649,16 +704,13 @@
         let targetX = x + 20;
         let targetY = y + 20;
         
-        // 手机端：放大镜显示在手指上方，防止遮挡
         if (isMobile) {
-            targetX = x - 50; // 稍微居中
-            targetY = y - 110; // 向上偏移
+            targetX = x - 50; 
+            targetY = y - 110; 
             
-            // 边界检查，防止超出顶部
-            if (targetY < 10) targetY = y + 30; // 如果上方空间不够，显示在下方
+            if (targetY < 10) targetY = y + 30; 
         }
         
-        // 右侧边界检查
         const maxX = window.innerWidth - 120;
         if (targetX > maxX) targetX = maxX;
         if (targetX < 10) targetX = 10;
@@ -671,28 +723,14 @@
         magnifier.style.display = 'none';
     }
 
-    function toggleSelect(div, index) {
-      if (selectedCells.has(index)) {
-        selectedCells.delete(index);
-        div.classList.remove("selected");
-      } else {
-        selectedCells.add(index);
-        div.classList.add("selected");
-      }
-    }
-
     clearSelectionBtn.addEventListener("click", () => {
       selectedCells.clear();
-      // 不清除 selection 框选区域，只清除选中的像素点
       const divs = matrixContainer.querySelectorAll('div.selected');
       divs.forEach(div => div.classList.remove('selected'));
-      // 重置放大镜
       hideMagnifier();
     });
     
-    // 全局释放拖动状态，防止意外卡死
     window.addEventListener("pointerup", () => {
-      isDraggingMatrix = false;
       isSelecting = false;
     });
 
@@ -718,12 +756,10 @@
             div.dataset.g = g;
             div.dataset.b = b;
             
-            div.innerHTML = `
-                <div class="content-wrapper">
-                    <span>R:${r}</span>
-                    <span>G:${g}</span>
-                    <span>B:${b}</span>
-                </div>
+            div.querySelector('.content-wrapper').innerHTML = `
+                <span>R:${r}</span>
+                <span>G:${g}</span>
+                <span>B:${b}</span>
             `;
         }
       });
