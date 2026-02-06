@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LSB 图片隐写术实验室 - 孙维刚教育研究院</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            cursor: default;
+            overflow-x: hidden; /* 防止横向滚动 */
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mono-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        canvas {
+            touch-action: none; /* 关键：阻止默认触摸行为（滚动），交给JS处理 */
+            image-rendering: pixelated;
+        }
+        
+        /* 扫描线动画 */
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent, rgba(34, 197, 94, 0.5), transparent);
+            transform: translateY(-100%);
+            pointer-events: none;
+            display: none;
+            z-index: 30;
+        }
+        .scanning .scan-overlay {
+            display: block;
+            animation: scan 2s linear infinite;
+        }
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        /* 变化高亮 */
+        .bit-changed {
+            color: #ef4444;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+        }
+        .bit-unchanged {
+            color: #475569;
+            opacity: 0.5;
+        }
+        
+        /* 按钮状态 */
+        .btn-active {
+            background-color: #4f46e5;
+            color: white;
+            border-color: #4338ca;
+        }
+        .btn-inactive {
+            background-color: #1e293b;
+            color: #94a3b8;
+            border-color: #334155;
+        }
+
+        /* 滑块样式 */
+        input[type=range] {
+            height: 4px;
+            border-radius: 2px;
+            background: #475569;
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px; /* 增大触控点 */
+            height: 20px;
+            border-radius: 50%;
+            background: #6366f1;
+            cursor: pointer;
+            transition: transform 0.1s;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-thumb:active {
+            transform: scale(1.2);
+        }
+        
+        /* 紧凑布局辅助类 */
+        .compact-card {
+            padding: 0;
+            border: 1px solid #334155;
+        }
+        .compact-header {
+            padding: 0.75rem 1rem;
+            background-color: #1e293b;
+            border-bottom: 1px solid #334155;
+        }
+        .compact-body {
+            padding: 0.5rem; /* 移动端减少内边距 */
+            background-color: #0f172a;
+        }
+        @media (min-width: 768px) {
+            .compact-body { padding: 1rem; }
+        }
+
+        /* 自定义画笔光标 (仅在非触摸设备显示) */
+        #customCursor {
+            position: fixed;
+            pointer-events: none;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: width 0.1s, height 0.1s, background-color 0.1s, border-color 0.1s;
+        }
+        @media (hover: none) {
+            #customCursor { display: none !important; }
+            .cursor-none { cursor: auto !important; }
+        }
+        .cursor-none {
+            cursor: none !important;
+        }
+        
+        /* 计算器按钮与输入框 */
+        .op-row {
+            @apply flex flex-col bg-slate-900 border border-slate-700 rounded overflow-hidden transition-all duration-300;
+        }
+        .op-row.active {
+            @apply border-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.2)];
+        }
+        .op-header {
+            @apply flex items-center justify-between p-3 cursor-pointer hover:bg-slate-800 transition active:bg-slate-800;
+        }
+        .op-row.active .op-header {
+            @apply bg-indigo-900/30 text-indigo-300;
+        }
+        .op-body {
+            @apply hidden bg-slate-800 p-3 border-t border-slate-700 flex gap-2 items-center justify-center;
+        }
+        .op-row.active .op-body {
+            @apply flex; 
+        }
+        
+        /* 强制黑色字体，超短宽度 */
+        .calc-input {
+            @apply bg-white border border-gray-300 font-bold text-lg px-1 py-1 rounded w-12 text-center outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200;
+            color: #000000 !important; 
+        }
+
+        /* 修改后的工具按钮样式 - 紧凑型有边框 */
+        .tool-btn {
+            @apply flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition border shadow-sm select-none;
+        }
+        .tool-btn-selected {
+            @apply bg-indigo-600 text-white border-indigo-400 ring-1 ring-indigo-400;
+        }
+        .tool-btn-normal {
+            @apply bg-slate-800 text-slate-300 border-slate-500 hover:bg-slate-700 hover:border-slate-400;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-sm md:text-base">
+
+    <!-- 自定义画笔光标元素 -->
+    <div id="customCursor"></div>
+
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-700 py-3 px-4 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <h1 class="text-lg md:text-xl font-bold flex items-center gap-2 text-indigo-400">
+                <i class="fa-solid fa-user-secret"></i> LSB 隐写实验室
+            </h1>
+            <div class="flex items-center gap-2 ml-auto">
+                <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
+                    <span class="text-xs text-slate-400 hidden sm:inline"><i class="fa-solid fa-circle-dot"></i> 笔刷</span>
+                    <input type="range" id="brushSizeSlider" min="1" max="50" value="15" class="w-24 accent-indigo-500" oninput="updateBrushSize(this.value)">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow p-2 md:p-4 max-w-7xl mx-auto w-full space-y-4 md:space-y-6">
+
+        <!-- 顶部两栏：原图与绘图 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+            
+            <!-- STEP 1: Original Image -->
+            <div class="bg-slate-800 rounded-lg overflow-hidden flex flex-col compact-card shadow-lg">
+                <div class="compact-header flex justify-between items-center">
+                    <h3 class="font-bold text-slate-200 text-sm">1. 背景图片</h3>
+                    <label class="cursor-pointer bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs py-1.5 px-3 rounded border border-slate-600 transition active:scale-95">
+                        <i class="fa-solid fa-upload mr-1"></i> 更换
+                        <input type="file" id="uploadInput" accept="image/*" class="hidden">
+                    </label>
+                </div>
+                <div class="compact-body flex-grow flex items-center justify-center relative min-h-[200px] md:min-h-[250px]">
+                    <canvas id="baseCanvas" class="shadow max-w-full h-auto object-contain max-h-[300px]"></canvas>
+                </div>
+            </div>
+
+            <!-- STEP 2: Secret Drawing / Upload -->
+            <div class="bg-slate-800 rounded-lg overflow-hidden flex flex-col compact-card shadow-lg">
+                <div class="compact-header flex flex-col gap-3">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-2">
+                        <h3 class="font-bold text-slate-200 text-sm">2. 秘密信息</h3>
+                        
+                        <!-- 模式选择器 -->
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <span class="text-[10px] text-indigo-300 font-bold bg-indigo-900/30 px-2 py-0.5 rounded border border-indigo-500/30 shrink-0">算法</span>
+                            <select id="stegoMode" onchange="changeMode()" class="bg-slate-700 text-white text-xs border border-slate-600 rounded px-2 py-1.5 outline-none focus:border-indigo-500 font-mono w-full sm:w-auto">
+                                <!-- JS will populate this -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 工具栏 (Compact Layout) -->
+                    <div class="flex flex-wrap gap-2 items-center justify-between border-t border-slate-700/50 pt-2 mt-1">
+                        
+                        <div class="flex gap-2">
+                            <button onclick="setSecretTool('draw')" id="btnToolDraw" class="tool-btn tool-btn-selected">
+                                <i class="fa-solid fa-pencil"></i> 自己绘制加密信息
+                            </button>
+                            <label class="cursor-pointer tool-btn tool-btn-normal" id="btnToolUpload">
+                                <i class="fa-solid fa-image"></i> 加载图片
+                                <input type="file" id="secretUpload" accept="image/*" class="hidden">
+                            </label>
+                        </div>
+
+                        <!-- 绘图颜色控制 -->
+                        <div id="drawControls" class="flex items-center gap-2 ml-auto">
+                            <button onclick="clearCanvas()" class="text-xs text-slate-400 hover:text-red-400 px-2 py-1 bg-slate-700/50 rounded border border-slate-600 hover:border-red-500/50 transition" title="清空画布">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                            <div class="flex items-center gap-1 bg-slate-700 border border-slate-600 rounded px-2 py-1">
+                                <div class="w-4 h-4 rounded-full bg-white cursor-pointer active:scale-90 transition border border-gray-400 ring-offset-1 ring-offset-slate-700 hover:ring-2 ring-white" onclick="setBrushColor('#ffffff')" title="白色"></div>
+                                <div class="w-4 h-4 rounded-full bg-red-500 cursor-pointer active:scale-90 transition hover:ring-2 ring-red-500 ring-offset-1 ring-offset-slate-700" onclick="setBrushColor('#ef4444')" title="红色"></div>
+                                <div class="w-4 h-4 rounded-full bg-green-500 cursor-pointer active:scale-90 transition hover:ring-2 ring-green-500 ring-offset-1 ring-offset-slate-700" onclick="setBrushColor('#22c55e')" title="绿色"></div>
+                                <div class="w-4 h-4 rounded-full bg-blue-500 cursor-pointer active:scale-90 transition hover:ring-2 ring-blue-500 ring-offset-1 ring-offset-slate-700" onclick="setBrushColor('#3b82f6')" title="蓝色"></div>
+                            </div>
+                        </div>
+
+                        <!-- 图片对比 -->
+                        <div id="imageControls" class="hidden ml-auto">
+                             <button class="text-xs bg-indigo-900 text-indigo-200 px-3 py-1.5 rounded border border-indigo-700 active:bg-indigo-700 transition select-none flex items-center justify-center gap-2 font-bold shadow-inner" onmousedown="showSecretOriginal()" onmouseup="showSecretQuantized()" onmouseleave="showSecretQuantized()" ontouchstart="showSecretOriginal()" ontouchend="showSecretQuantized()">
+                                <i class="fa-solid fa-eye"></i> 按住对比原图
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="compact-body flex-grow flex items-center justify-center bg-black relative min-h-[250px]">
+                    <canvas id="secretCanvas" class="shadow cursor-crosshair border border-slate-600 max-h-[300px]"></canvas>
+                    <div class="absolute bottom-2 pointer-events-none opacity-80 z-10 max-w-[90%] text-center">
+                         <span id="modeBadge" class="text-[10px] px-3 py-1 rounded-full bg-slate-900/90 border border-slate-600 text-indigo-300 shadow-lg block truncate">
+                            Loading...
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="flex flex-col items-center justify-center -my-2 z-10 relative">
+            <button onclick="startEncodingProcess()" id="encodeBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-full shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] transition transform active:scale-95 text-sm md:text-base flex items-center gap-2 border-2 border-slate-900 w-full md:w-auto justify-center">
+                <i class="fa-solid fa-microchip"></i> 执行隐写合并
+            </button>
+        </div>
+
+        <!-- ENCODED RESULT SECTION -->
+        <div id="resultContainer" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            
+            <!-- 3. Encoded Image + Toolbar -->
+            <div class="lg:col-span-2 bg-slate-800 rounded-lg shadow-lg compact-card relative overflow-hidden group flex flex-col order-1 lg:order-1">
+                <div class="bg-indigo-900/30 border-b border-indigo-500/30 p-2 px-4 flex flex-wrap justify-between items-center z-40 gap-2">
+                    <h3 class="font-bold text-indigo-300 text-sm">3. 合成结果</h3>
+                    
+                    <div class="flex gap-2 items-center ml-auto">
+                        <!-- Mode Switch -->
+                        <div class="flex rounded-md shadow-sm" role="group">
+                            <button id="btnInspect" onclick="setAnalysisMode('inspect')" class="btn-active text-xs px-3 py-1.5 rounded-l border-y border-l transition flex items-center gap-1">
+                                <i class="fa-solid fa-magnifying-glass"></i><span class="hidden sm:inline">检测</span>
+                            </button>
+                            <button id="btnMark" onclick="setAnalysisMode('mark')" class="btn-inactive text-xs px-3 py-1.5 rounded-r border transition flex items-center gap-1">
+                                <i class="fa-solid fa-pen"></i><span class="hidden sm:inline">标记</span>
+                            </button>
+                        </div>
+                        <div class="h-4 w-px bg-slate-600 mx-1"></div>
+                        <!-- Actions -->
+                        <button onclick="clearMarks()" class="text-slate-400 hover:text-red-400 text-xs px-2 py-1 bg-slate-700/50 rounded" title="清空标记">
+                            <i class="fa-solid fa-eraser"></i>
+                        </button>
+                        <button onclick="downloadImage()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded shadow flex items-center gap-1 transition active:bg-indigo-700">
+                            <i class="fa-solid fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="compact-body p-4 flex-grow flex items-center justify-center bg-slate-900 relative min-h-[250px]" id="encodedWrapper">
+                    <div class="relative shadow-xl border border-slate-700 inline-block">
+                        <canvas id="encodedCanvas" class="block max-w-full h-auto max-h-[400px]"></canvas>
+                        <canvas id="markerCanvas" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+                        <div id="encodeScanOverlay" class="scan-overlay"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compact Pixel Inspector -->
+            <div class="bg-slate-900 rounded-lg shadow-lg border border-slate-700 p-3 flex flex-col font-mono text-xs h-full order-2 lg:order-2">
+                <h4 class="text-indigo-400 font-bold mb-2 border-b border-slate-700 pb-1 flex items-center gap-2 text-xs">
+                    <i class="fa-solid fa-eye"></i> 像素分析器 <span id="inspectorModeLabel" class="ml-auto text-[10px] text-slate-500">Mod 2</span>
+                </h4>
+                
+                <div id="inspectorContent" class="hidden flex-col gap-3">
+                    <!-- Color & Coord -->
+                    <div class="flex justify-between items-center bg-slate-800 p-2 rounded">
+                        <div class="flex gap-2 items-center">
+                            <div class="w-6 h-6 border border-slate-500 shadow-inner rounded-sm" id="inspectorColorBox"></div>
+                            <span class="text-white font-bold" id="inspectorCoord">X:0 Y:0</span>
+                        </div>
+                        <span class="text-[10px] text-slate-500">RGB通道检测</span>
+                    </div>
+
+                    <!-- Compact Data Table -->
+                    <div class="w-full bg-slate-800 rounded border border-slate-700 overflow-hidden">
+                        <table class="w-full text-center text-[10px] sm:text-xs">
+                            <thead class="bg-slate-700 text-slate-300">
+                                <tr>
+                                    <th class="py-1">C</th>
+                                    <th class="py-1">载体</th>
+                                    <th class="py-1">隐写</th>
+                                    <th class="py-1">结果</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-slate-200">
+                                <tr class="border-b border-slate-700/50">
+                                    <td class="font-bold text-red-400 border-r border-slate-700/50">R</td>
+                                    <td id="insp-r-base" class="text-slate-400">0</td>
+                                    <td id="insp-r-plus" class="font-bold">+0</td>
+                                    <td id="insp-r-res">0</td>
+                                </tr>
+                                <tr class="border-b border-slate-700/50">
+                                    <td class="font-bold text-green-400 border-r border-slate-700/50">G</td>
+                                    <td id="insp-g-base" class="text-slate-400">0</td>
+                                    <td id="insp-g-plus" class="font-bold">+0</td>
+                                    <td id="insp-g-res">0</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold text-blue-400 border-r border-slate-700/50">B</td>
+                                    <td id="insp-b-base" class="text-slate-400">0</td>
+                                    <td id="insp-b-plus" class="font-bold">+0</td>
+                                    <td id="insp-b-res">0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="text-[10px] text-slate-500 leading-tight">
+                        <p class="mb-1"><i class="fa-solid fa-lightbulb text-yellow-600"></i> 提示:</p>
+                        <p id="inspectorHint">如果“隐写”列 > 0，说明有信息。</p>
+                    </div>
+                </div>
+                
+                <div id="inspectorEmpty" class="flex-grow flex flex-col items-center justify-center text-slate-500 text-center p-2 opacity-60 min-h-[100px]">
+                    <i class="fa-solid fa-hand-pointer mb-2 text-xl"></i>
+                    <p>点击/触摸左图<br>查看数据</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MATH / DECODE SECTION -->
+        <div class="border-t border-slate-800 pt-6 flex flex-col items-center pb-6">
+            
+            <!-- Trigger Button -->
+            <button id="btnRevealDecode" onclick="toggleDecodeSection()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-4 px-12 rounded-lg border border-slate-600 transition flex flex-col items-center gap-1 group w-full md:w-auto active:bg-slate-700">
+                <span class="flex items-center gap-2 text-sm md:text-base"><i class="fa-solid fa-unlock-keyhole text-indigo-400"></i> 解密图片中的信息</span>
+                <span class="text-[10px] text-slate-500 font-normal group-hover:text-slate-400">点击展开，使用数学方法提取图像</span>
+            </button>
+
+            <!-- Collapsible Content -->
+            <div id="decodeSection" class="hidden w-full max-w-4xl mt-6 animate-fade-in-down">
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
+                    
+                    <!-- Control Panel (Redesigned) -->
+                    <div class="md:col-span-1 flex flex-col gap-3 order-1">
+                        <div class="text-sm font-bold text-indigo-400 pb-1 border-b border-slate-700">选择运算方式</div>
+                        
+                        <!-- 1. ADD -->
+                        <div class="op-row" id="row-add">
+                            <div class="op-header" onclick="toggleOpRow('row-add')">
+                                <span class="text-xs font-bold"><i class="fa-solid fa-plus w-4 text-center"></i> 加法运算</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform"></i>
+                            </div>
+                            <div class="op-body">
+                                <input type="number" id="val-add" value="10" class="calc-input" placeholder="0-255">
+                                <button onclick="runMath('+', 'val-add')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-bold active:bg-indigo-700">执行</button>
+                            </div>
+                        </div>
+
+                        <!-- 2. SUB -->
+                        <div class="op-row" id="row-sub">
+                            <div class="op-header" onclick="toggleOpRow('row-sub')">
+                                <span class="text-xs font-bold"><i class="fa-solid fa-minus w-4 text-center"></i> 减法运算</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform"></i>
+                            </div>
+                            <div class="op-body">
+                                <input type="number" id="val-sub" value="10" class="calc-input" placeholder="0-255">
+                                <button onclick="runMath('-', 'val-sub')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-bold active:bg-indigo-700">执行</button>
+                            </div>
+                        </div>
+
+                        <!-- 3. MULT -->
+                        <div class="op-row" id="row-mult">
+                            <div class="op-header" onclick="toggleOpRow('row-mult')">
+                                <span class="text-xs font-bold"><i class="fa-solid fa-xmark w-4 text-center"></i> 乘法运算</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform"></i>
+                            </div>
+                            <div class="op-body">
+                                <input type="number" id="val-mult" value="2" class="calc-input" placeholder="因子">
+                                <button onclick="runMath('*', 'val-mult')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-bold active:bg-indigo-700">执行</button>
+                            </div>
+                        </div>
+
+                        <!-- 4. DIV -->
+                        <div class="op-row" id="row-div">
+                            <div class="op-header" onclick="toggleOpRow('row-div')">
+                                <span class="text-xs font-bold"><i class="fa-solid fa-divide w-4 text-center"></i> 除法运算</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform"></i>
+                            </div>
+                            <div class="op-body">
+                                <input type="number" id="val-div" value="2" class="calc-input" placeholder="因子">
+                                <button onclick="runMath('/', 'val-div')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-bold active:bg-indigo-700">执行</button>
+                            </div>
+                        </div>
+
+                        <!-- 5. MOD (Highlight) -->
+                        <div class="op-row border-indigo-500/50" id="row-mod">
+                            <div class="op-header bg-indigo-900/20" onclick="toggleOpRow('row-mod')">
+                                <span class="text-xs font-bold text-indigo-300"><i class="fa-solid fa-percent w-4 text-center"></i> 计算除以几的余数</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] text-indigo-300 transition-transform"></i>
+                            </div>
+                            <div class="op-body">
+                                <input type="number" id="val-mod" value="2" class="calc-input" placeholder="模数">
+                                <button onclick="runMath('%', 'val-mod')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-bold active:bg-indigo-700">执行</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Result Canvas -->
+                    <div class="md:col-span-3 bg-slate-800 rounded-lg shadow-lg border border-green-500/30 overflow-hidden compact-card flex flex-col order-2">
+                        <div class="bg-green-900/20 border-b border-green-500/20 p-3 flex justify-between items-center">
+                            <h3 class="font-bold text-green-400 text-sm">4. 计算结果</h3>
+                            <span id="mathStatus" class="text-[10px] text-slate-500 font-mono truncate max-w-[150px]">等待执行...</span>
+                        </div>
+                        
+                        <div class="p-4 flex-grow flex items-center justify-center bg-black relative min-h-[250px]">
+                            <canvas id="decodedCanvas" class="shadow max-w-full h-auto border border-green-900/50 max-h-[400px]"></canvas>
+                            <div id="decodeScanOverlay" class="scan-overlay absolute inset-0"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="py-6 text-center text-slate-500 text-xs border-t border-slate-800">
+        @孙维刚教育研究院
+    </footer>
+
+    <script>
+        // --- Configuration ---
+        const CANVAS_WIDTH = 500;
+        const CANVAS_HEIGHT = 400;
+        let brushColor = '#ffffff';
+        let isDrawing = false;
+        let brushSize = 15;
+        
+        let analysisMode = 'inspect'; 
+        let isMarking = false;
+        let currentMode = 2; // Default Mod 2
+        
+        // Secret mode: 'draw' or 'image'
+        let secretToolMode = 'draw';
+        
+        // Storage for Secret Image comparison
+        let originalSecretImgData = null; // Store Image element or Canvas data
+
+        // --- DOM Elements ---
+        const baseCanvas = document.getElementById('baseCanvas');
+        const ctxBase = baseCanvas.getContext('2d', { willReadFrequently: true });
+        
+        const secretCanvas = document.getElementById('secretCanvas');
+        const ctxSecret = secretCanvas.getContext('2d', { willReadFrequently: true });
+        
+        const encodedCanvas = document.getElementById('encodedCanvas');
+        const ctxEncoded = encodedCanvas.getContext('2d', { willReadFrequently: true });
+        
+        const markerCanvas = document.getElementById('markerCanvas');
+        const ctxMarker = markerCanvas.getContext('2d');
+        
+        const decodedCanvas = document.getElementById('decodedCanvas');
+        const ctxDecoded = decodedCanvas.getContext('2d');
+        
+        const customCursor = document.getElementById('customCursor');
+        const stegoModeSelect = document.getElementById('stegoMode');
+
+        // --- Initialization ---
+        window.onload = function() {
+            [baseCanvas, secretCanvas, encodedCanvas, markerCanvas, decodedCanvas].forEach(c => {
+                c.width = CANVAS_WIDTH;
+                c.height = CANVAS_HEIGHT;
+            });
+
+            // Populate Mode Selector
+            const modes = [2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50, 100];
+            modes.forEach(i => {
+                let colorCount = Math.pow(i, 3);
+                let opt = document.createElement('option');
+                opt.value = i;
+                opt.innerText = `Mod ${i} (${colorCount >= 1000 ? (colorCount/1000).toFixed(1)+'k' : colorCount}色)`;
+                if(i===2) opt.innerText += " - 基础";
+                if(i===100) opt.innerText += " - 噪点大";
+                stegoModeSelect.appendChild(opt);
+            });
+
+            // Load default background.png with fallback
+            const img = new Image();
+            img.onload = () => {
+                loadImage('./background.png');
+            };
+            img.onerror = () => {
+                loadImage('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80');
+            };
+            img.src = './background.png';
+
+            clearCanvas();
+            setupDrawingEvents();
+            setupAnalysisTools();
+            
+            updateBrushSize(15);
+            setSecretTool('draw'); // Default tool
+        };
+
+        // --- Secret Tool Switching ---
+        function setSecretTool(mode) {
+            secretToolMode = mode;
+            const btnDraw = document.getElementById('btnToolDraw');
+            const btnUpload = document.getElementById('btnToolUpload');
+            const drawControls = document.getElementById('drawControls');
+            const imageControls = document.getElementById('imageControls');
+
+            if (mode === 'draw') {
+                btnDraw.className = "tool-btn tool-btn-selected";
+                btnUpload.className = "cursor-pointer tool-btn tool-btn-normal";
+                drawControls.classList.remove('hidden');
+                imageControls.classList.add('hidden');
+                
+                if(originalSecretImgData) {
+                    clearCanvas(); 
+                }
+                
+                secretCanvas.style.pointerEvents = 'auto';
+
+            } else if (mode === 'image') {
+                btnDraw.className = "tool-btn tool-btn-normal";
+                btnUpload.className = "cursor-pointer tool-btn tool-btn-selected";
+                drawControls.classList.add('hidden');
+                imageControls.classList.remove('hidden');
+                
+                secretCanvas.style.pointerEvents = 'none';
+            }
+        }
+
+
+        // --- Brush & Cursor Control ---
+        function updateBrushSize(val) {
+            brushSize = parseInt(val);
+            if(document.getElementById('brushSizeSlider')) document.getElementById('brushSizeSlider').value = brushSize;
+            
+            updateCursorStyle();
+        }
+
+        function setBrushColor(color) { 
+            brushColor = color; 
+            updateCursorStyle();
+        }
+
+        function updateCursorStyle() {
+            customCursor.style.width = brushSize + 'px';
+            customCursor.style.height = brushSize + 'px';
+            customCursor.style.borderColor = brushColor;
+            
+            let r=0, g=0, b=0;
+            if(brushColor.startsWith('#')) {
+                if(brushColor.length === 4) {
+                    r = parseInt(brushColor[1]+brushColor[1], 16);
+                    g = parseInt(brushColor[2]+brushColor[2], 16);
+                    b = parseInt(brushColor[3]+brushColor[3], 16);
+                } else {
+                    r = parseInt(brushColor.slice(1,3), 16);
+                    g = parseInt(brushColor.slice(3,5), 16);
+                    b = parseInt(brushColor.slice(5,7), 16);
+                }
+            }
+            customCursor.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.2)`;
+        }
+
+        // --- Mode Switching ---
+        function changeMode() {
+            currentMode = parseInt(document.getElementById('stegoMode').value);
+            const badge = document.getElementById('modeBadge');
+            const inspectorLabel = document.getElementById('inspectorModeLabel');
+            const inspectorHint = document.getElementById('inspectorHint');
+            
+            const colorCount = Math.pow(currentMode, 3);
+            let displayCount = colorCount >= 1000 ? (colorCount/1000).toFixed(1)+'k' : colorCount;
+            
+            badge.innerText = `当前: Mod ${currentMode} (${displayCount}色) | 隐写值 0-${currentMode-1}`;
+            inspectorLabel.innerText = `Mod ${currentMode}`;
+            inspectorHint.innerText = `如果隐写列 > 0，说明有信息`;
+            
+            document.getElementById('val-mod').value = currentMode;
+            
+            if(originalSecretImgData) {
+                ctxSecret.putImageData(originalSecretImgData, 0, 0);
+                quantizeSecretCanvas();
+            } else {
+                quantizeSecretCanvas();
+            }
+        }
+
+        function quantizeSecretCanvas() {
+            const imgData = ctxSecret.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            const data = imgData.data;
+            const levels = currentMode; 
+
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i+3] === 0) continue; 
+                
+                data[i] = quantizeChannel(data[i], levels);
+                data[i+1] = quantizeChannel(data[i+1], levels);
+                data[i+2] = quantizeChannel(data[i+2], levels);
+            }
+            ctxSecret.putImageData(imgData, 0, 0);
+        }
+
+        function quantizeChannel(val, levels) {
+            if (levels <= 1) return 0; 
+            const step = 255 / (levels - 1);
+            const discrete = Math.round(val / step); 
+            return Math.round(discrete * step);
+        }
+        
+        // --- Image Handling ---
+        function loadImage(src) {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => {
+                const ratio = Math.max(CANVAS_WIDTH / img.width, CANVAS_HEIGHT / img.height);
+                const x = (CANVAS_WIDTH - img.width * ratio) / 2;
+                const y = (CANVAS_HEIGHT - img.height * ratio) / 2;
+                ctxBase.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctxBase.drawImage(img, 0, 0, img.width, img.height, x, y, img.width * ratio, img.height * ratio);
+            };
+            img.src = src;
+        }
+
+        document.getElementById('uploadInput').addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (event) => loadImage(event.target.result);
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        document.getElementById('secretUpload').addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                setSecretTool('image');
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = () => {
+                        const ratio = Math.max(CANVAS_WIDTH / img.width, CANVAS_HEIGHT / img.height);
+                        const x = (CANVAS_WIDTH - img.width * ratio) / 2;
+                        const y = (CANVAS_HEIGHT - img.height * ratio) / 2;
+                        
+                        ctxSecret.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                        ctxSecret.fillStyle = "#000000";
+                        ctxSecret.fillRect(0,0,CANVAS_WIDTH, CANVAS_HEIGHT);
+                        ctxSecret.drawImage(img, 0, 0, img.width, img.height, x, y, img.width * ratio, img.height * ratio);
+                        
+                        originalSecretImgData = ctxSecret.getImageData(0,0,CANVAS_WIDTH, CANVAS_HEIGHT);
+                        quantizeSecretCanvas();
+                    };
+                    img.src = event.target.result;
+                }
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        function showSecretOriginal() {
+            if(originalSecretImgData) ctxSecret.putImageData(originalSecretImgData, 0, 0);
+        }
+
+        function showSecretQuantized() {
+            if(originalSecretImgData) {
+                ctxSecret.putImageData(originalSecretImgData, 0, 0);
+                quantizeSecretCanvas();
+            }
+        }
+
+        // --- Drawing Logic ---
+        function setupDrawingEvents() {
+            const startDraw = (e) => { isDrawing = true; draw(e); };
+            const stopDraw = () => { isDrawing = false; ctxSecret.beginPath(); };
+            const draw = (e) => {
+                if (!isDrawing) return;
+                const coords = getCanvasCoordinates(secretCanvas, e);
+
+                ctxSecret.lineWidth = brushSize; 
+                ctxSecret.lineCap = 'round';
+                ctxSecret.strokeStyle = brushColor;
+                ctxSecret.lineTo(coords.x, coords.y);
+                ctxSecret.stroke();
+                ctxSecret.beginPath();
+                ctxSecret.moveTo(coords.x, coords.y);
+            }
+
+            [secretCanvas, markerCanvas].forEach(canvas => {
+                canvas.addEventListener('mouseenter', () => customCursor.style.display = 'block');
+                canvas.addEventListener('mouseleave', () => customCursor.style.display = 'none');
+                canvas.addEventListener('mousemove', (e) => {
+                    const clientX = e.clientX || e.touches?.[0].clientX;
+                    const clientY = e.clientY || e.touches?.[0].clientY;
+                    customCursor.style.left = clientX + 'px';
+                    customCursor.style.top = clientY + 'px';
+                });
+                
+                // Hide system cursor ONLY if not touch device (approximated)
+                if (window.matchMedia("(hover: hover)").matches) {
+                    canvas.classList.add('cursor-none');
+                }
+            });
+
+            secretCanvas.addEventListener('mousedown', startDraw);
+            secretCanvas.addEventListener('mouseup', stopDraw);
+            secretCanvas.addEventListener('mousemove', draw);
+            
+            // Touch events - Prevent Scrolling
+            secretCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDraw(e); }, {passive: false});
+            secretCanvas.addEventListener('touchend', (e) => { e.preventDefault(); stopDraw(e); }, {passive: false});
+            secretCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, {passive: false});
+        }
+
+        function clearCanvas() {
+            ctxSecret.fillStyle = '#000000';
+            ctxSecret.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            originalSecretImgData = null;
+        }
+
+        function getCanvasCoordinates(canvas, e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const clientX = e.clientX || e.touches?.[0].clientX;
+            const clientY = e.clientY || e.touches?.[0].clientY;
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        // --- Analysis Tools ---
+        
+        function setAnalysisMode(mode) {
+            analysisMode = mode;
+            const btnInspect = document.getElementById('btnInspect');
+            const btnMark = document.getElementById('btnMark');
+            
+            if (mode === 'inspect') {
+                btnInspect.className = "btn-active text-xs px-3 py-1.5 rounded-l border-y border-l transition flex items-center gap-1";
+                btnMark.className = "btn-inactive text-xs px-3 py-1.5 rounded-r border transition flex items-center gap-1";
+            } else {
+                btnInspect.className = "btn-inactive text-xs px-3 py-1.5 rounded-l border-y border-l transition flex items-center gap-1";
+                btnMark.className = "btn-active text-xs px-3 py-1.5 rounded-r border transition flex items-center gap-1";
+            }
+        }
+
+        function clearMarks() {
+            ctxMarker.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        }
+
+        function setupAnalysisTools() {
+            const startMark = (e) => {
+                if (analysisMode === 'mark') {
+                    isMarking = true;
+                    const coords = getCanvasCoordinates(markerCanvas, e);
+                    ctxMarker.beginPath();
+                    ctxMarker.moveTo(coords.x, coords.y);
+                    mark(e);
+                }
+            };
+            const stopMark = () => {
+                isMarking = false;
+                ctxMarker.beginPath();
+            };
+            const mark = (e) => {
+                const coords = getCanvasCoordinates(markerCanvas, e);
+                runInspector(coords.x, coords.y); 
+                
+                if (!isMarking || analysisMode !== 'mark') return;
+                
+                ctxMarker.lineWidth = brushSize; 
+                ctxMarker.lineCap = 'round';
+                ctxMarker.strokeStyle = brushColor; 
+                ctxMarker.globalAlpha = 0.6;
+                ctxMarker.lineTo(coords.x, coords.y);
+                ctxMarker.stroke();
+                ctxMarker.beginPath();
+                ctxMarker.moveTo(coords.x, coords.y);
+            };
+            
+            markerCanvas.addEventListener('mousedown', startMark);
+            markerCanvas.addEventListener('mouseup', stopMark);
+            markerCanvas.addEventListener('mousemove', mark);
+            
+            // Touch Support
+            markerCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); startMark(e); }, {passive: false});
+            markerCanvas.addEventListener('touchend', (e) => { e.preventDefault(); stopMark(e); }, {passive: false});
+            markerCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); mark(e); }, {passive: false});
+        }
+
+        function runInspector(x, y) {
+            x = Math.floor(x);
+            y = Math.floor(y);
+            if (x < 0 || y < 0 || x >= CANVAS_WIDTH || y >= CANVAS_HEIGHT) return;
+
+            document.getElementById('inspectorEmpty').classList.add('hidden');
+            document.getElementById('inspectorContent').classList.remove('hidden');
+            document.getElementById('inspectorContent').classList.add('flex');
+
+            const originalPixel = ctxBase.getImageData(x, y, 1, 1).data;
+            const newPixel = ctxEncoded.getImageData(x, y, 1, 1).data;
+
+            document.getElementById('inspectorCoord').innerText = `${x},${y}`;
+            document.getElementById('inspectorColorBox').style.backgroundColor = `rgb(${newPixel[0]}, ${newPixel[1]}, ${newPixel[2]})`;
+
+            updateInspectorRow('r', originalPixel[0], newPixel[0]);
+            updateInspectorRow('g', originalPixel[1], newPixel[1]);
+            updateInspectorRow('b', originalPixel[2], newPixel[2]);
+        }
+
+        function updateInspectorRow(color, baseVal, newVal) {
+            let safeBase = baseVal;
+            const maxSecret = currentMode - 1;
+            if (safeBase + maxSecret > 255) {
+                safeBase = 255 - maxSecret;
+            }
+            const cleanBase = safeBase - (safeBase % currentMode);
+            const secretVal = newVal - cleanBase;
+            
+            const baseEl = document.getElementById(`insp-${color}-base`);
+            const plusEl = document.getElementById(`insp-${color}-plus`);
+            const resEl = document.getElementById(`insp-${color}-res`);
+
+            baseEl.innerText = cleanBase;
+            resEl.innerText = newVal;
+            
+            if (secretVal > 0) {
+                plusEl.innerText = "+" + secretVal;
+                plusEl.className = "text-center font-bold text-red-500 bit-changed";
+            } else {
+                plusEl.innerText = "+0";
+                plusEl.className = "text-center font-bold bit-unchanged text-xs";
+            }
+        }
+
+        // --- Core Process Logic ---
+
+        function startEncodingProcess() {
+            quantizeSecretCanvas();
+        
+            const resultSection = document.getElementById('resultContainer');
+            resultSection.classList.remove('hidden');
+            
+            // Only auto-scroll if desktop, or very deliberate action on mobile
+            if(window.innerWidth >= 768) {
+                resultSection.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                // Mobile: Gentle scroll
+                setTimeout(() => resultSection.scrollIntoView({ behavior: 'smooth' }), 100);
+            }
+
+            const wrapper = document.getElementById('encodedWrapper');
+            const overlay = document.getElementById('encodeScanOverlay');
+            
+            document.getElementById('decodeSection').classList.add('hidden');
+            document.getElementById('btnRevealDecode').classList.remove('hidden');
+
+            overlay.style.display = 'block';
+            setTimeout(() => {
+                performSteganography();
+                overlay.style.display = 'none';
+                clearMarks();
+            }, 800);
+        }
+
+        function toggleDecodeSection() {
+            const decodeSec = document.getElementById('decodeSection');
+            const btn = document.getElementById('btnRevealDecode');
+            
+            decodeSec.classList.remove('hidden');
+            btn.classList.add('hidden'); 
+            
+            const encodedData = ctxEncoded.getImageData(0,0,CANVAS_WIDTH, CANVAS_HEIGHT);
+            ctxDecoded.putImageData(encodedData, 0, 0);
+            document.getElementById('mathStatus').innerText = "等待执行运算... (当前显示原合成图)";
+            
+            decodeSec.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function performSteganography() {
+            const baseDataObj = ctxBase.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            const baseData = baseDataObj.data;
+            const secretDataObj = ctxSecret.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            const secretData = secretDataObj.data;
+
+            const N = currentMode;
+            const maxSecret = N - 1;
+            
+            for (let i = 0; i < baseData.length; i += 4) {
+                for (let j = 0; j < 3; j++) {
+                    let baseVal = baseData[i+j];
+                    
+                    if (baseVal + maxSecret > 255) {
+                        baseVal = 255 - maxSecret;
+                    }
+                    
+                    let clean = baseVal - (baseVal % N);
+                    
+                    let secretPixel = secretData[i+j];
+                    const step = 255 / (N - 1);
+                    let secretVal = Math.round(secretPixel / step);
+                    
+                    baseData[i+j] = clean + secretVal;
+                }
+            }
+            ctxEncoded.putImageData(baseDataObj, 0, 0);
+        }
+
+        // --- Math / Calc Logic ---
+
+        function toggleOpRow(id) {
+            const allRows = document.querySelectorAll('.op-row');
+            allRows.forEach(row => {
+                if(row.id !== id) row.classList.remove('active');
+            });
+            
+            const row = document.getElementById(id);
+            row.classList.toggle('active');
+            
+            if(row.classList.contains('active')) {
+                const input = row.querySelector('input');
+                if(input) input.focus();
+            }
+        }
+
+        function runMath(op, inputId) {
+            const encodedDataObj = ctxEncoded.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            const encodedData = encodedDataObj.data;
+            const outputImage = ctxDecoded.createImageData(CANVAS_WIDTH, CANVAS_HEIGHT);
+            const outputData = outputImage.data;
+
+            const val = parseFloat(document.getElementById(inputId).value);
+            if(isNaN(val)) {
+                alert("请输入有效的数字");
+                return;
+            }
+            
+            let displayMultiplier = 1;
+            if (op === '%') {
+                displayMultiplier = 255 / (val - 1 || 1); 
+                if(val <= 1) displayMultiplier = 1;
+            }
+
+            for (let i = 0; i < encodedData.length; i += 4) {
+                outputData[i+3] = 255;
+
+                for(let j=0; j<3; j++) {
+                    let pixel = encodedData[i+j];
+                    let result = 0;
+                    
+                    switch(op) {
+                        case '+': result = pixel + val; break;
+                        case '-': result = pixel - val; break;
+                        case '*': result = pixel * val; break;
+                        case '/': result = pixel / val; break;
+                        case '%': result = (pixel % val) * displayMultiplier; break;
+                    }
+                    
+                    if (op !== '%') {
+                         result = Math.max(0, Math.min(255, result));
+                    }
+                    
+                    outputData[i+j] = result;
+                }
+            }
+            
+            ctxDecoded.putImageData(outputImage, 0, 0);
+            
+            let statusText = `Pixel = Pixel ${op} ${val}`;
+            if(op === '%') statusText += ` (放大 ${Math.round(displayMultiplier)}倍显示)`;
+            document.getElementById('mathStatus').innerText = statusText;
+            
+            const overlay = document.getElementById('decodeScanOverlay');
+            overlay.style.display = 'block';
+            setTimeout(() => { overlay.style.display = 'none'; }, 500);
+        }
+
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = `stego_result_mode${currentMode}.png`;
+            link.href = encodedCanvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>
