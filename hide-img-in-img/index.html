@@ -159,7 +159,7 @@
 
         /* 修改后的工具按钮样式 - 紧凑型有边框 */
         .tool-btn {
-            @apply flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition border shadow-sm select-none;
+            @apply flex items-center gap-2 px-3 py-1.5 rounded text-xs font-bold transition border shadow-sm select-none justify-center whitespace-nowrap;
         }
         .tool-btn-selected {
             @apply bg-indigo-600 text-white border-indigo-400 ring-1 ring-indigo-400;
@@ -180,12 +180,6 @@
             <h1 class="text-lg md:text-xl font-bold flex items-center gap-2 text-indigo-400">
                 <i class="fa-solid fa-user-secret"></i> 隐写术实验室
             </h1>
-            <div class="flex items-center gap-2 ml-auto">
-                <div class="flex items-center gap-2 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-                    <span class="text-xs text-slate-400 hidden sm:inline"><i class="fa-solid fa-circle-dot"></i> 笔刷</span>
-                    <input type="range" id="brushSizeSlider" min="1" max="50" value="15" class="w-24 accent-indigo-500" oninput="updateBrushSize(this.value)">
-                </div>
-            </div>
         </div>
     </header>
 
@@ -227,32 +221,43 @@
                     <!-- 工具栏 (Compact Layout) -->
                     <div class="flex flex-wrap gap-2 items-center justify-between border-t border-slate-700/50 pt-2 mt-1">
                         
-                        <div class="flex gap-2">
+                        <div class="flex flex-wrap gap-2 w-full">
                             <button onclick="setSecretTool('draw')" id="btnToolDraw" class="tool-btn tool-btn-selected">
                                 <i class="fa-solid fa-pencil"></i> 自己绘制加密信息
                             </button>
+                            <button onclick="loadDefaultSecret()" class="tool-btn tool-btn-normal" id="btnToolDefault">
+                                <i class="fa-solid fa-key"></i> 加载默认图片
+                            </button>
                             <label class="cursor-pointer tool-btn tool-btn-normal" id="btnToolUpload">
-                                <i class="fa-solid fa-image"></i> 加载图片
+                                <i class="fa-solid fa-upload"></i> 上传其他图片
                                 <input type="file" id="secretUpload" accept="image/*" class="hidden">
                             </label>
                         </div>
 
-                        <!-- 绘图颜色控制 -->
-                        <div id="drawControls" class="flex items-center gap-2 ml-auto">
-                            <button onclick="clearCanvas()" class="text-xs text-slate-400 hover:text-red-400 px-2 py-1 bg-slate-700/50 rounded border border-slate-600 hover:border-red-500/50 transition" title="清空画布">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                        <!-- 绘图颜色控制 & 笔刷粗细 (都在这里显示) -->
+                        <div id="drawControls" class="flex flex-wrap items-center gap-2 mt-2 w-full bg-slate-900/50 p-2 rounded border border-slate-700">
+                            <!-- 颜色 -->
                             <div class="flex items-center gap-1 bg-slate-700 border border-slate-600 rounded px-2 py-1">
                                 <div class="w-4 h-4 rounded-full bg-white cursor-pointer active:scale-90 transition border border-gray-400 ring-offset-1 ring-offset-slate-700 hover:ring-2 ring-white" onclick="setBrushColor('#ffffff')" title="白色"></div>
                                 <div class="w-4 h-4 rounded-full bg-red-500 cursor-pointer active:scale-90 transition hover:ring-2 ring-red-500 ring-offset-1 ring-offset-slate-700" onclick="setBrushColor('#ef4444')" title="红色"></div>
                                 <div class="w-4 h-4 rounded-full bg-green-500 cursor-pointer active:scale-90 transition hover:ring-2 ring-green-500 ring-offset-1 ring-offset-slate-700" onclick="setBrushColor('#22c55e')" title="绿色"></div>
                                 <div class="w-4 h-4 rounded-full bg-blue-500 cursor-pointer active:scale-90 transition hover:ring-2 ring-blue-500 ring-offset-1 ring-offset-slate-700" onclick="setBrushColor('#3b82f6')" title="蓝色"></div>
                             </div>
+
+                            <!-- 笔刷粗细 -->
+                            <div class="flex items-center gap-2 bg-slate-700 border border-slate-600 rounded px-2 py-1 ml-auto sm:ml-0">
+                                <span class="text-xs text-slate-300 font-bold whitespace-nowrap">笔刷粗细</span>
+                                <input type="range" id="brushSizeSlider" min="1" max="50" value="15" class="w-20 sm:w-24 accent-indigo-500" oninput="updateBrushSize(this.value)">
+                            </div>
+
+                            <button onclick="clearCanvas()" class="text-xs text-slate-400 hover:text-red-400 px-2 py-1 ml-auto transition border border-transparent hover:border-red-500/30 rounded" title="清空画布">
+                                <i class="fa-solid fa-trash"></i> 清空
+                            </button>
                         </div>
 
                         <!-- 图片对比 -->
-                        <div id="imageControls" class="hidden ml-auto">
-                             <button class="text-xs bg-indigo-900 text-indigo-200 px-3 py-1.5 rounded border border-indigo-700 active:bg-indigo-700 transition select-none flex items-center justify-center gap-2 font-bold shadow-inner" onmousedown="showSecretOriginal()" onmouseup="showSecretQuantized()" onmouseleave="showSecretQuantized()" ontouchstart="showSecretOriginal()" ontouchend="showSecretQuantized()">
+                        <div id="imageControls" class="hidden w-full mt-2">
+                             <button class="w-full text-xs bg-indigo-900 text-indigo-200 px-3 py-3 rounded border border-indigo-700 active:bg-indigo-700 transition select-none flex items-center justify-center gap-2 font-bold shadow-inner" onmousedown="showSecretOriginal()" onmouseup="showSecretQuantized()" onmouseleave="showSecretQuantized()" ontouchstart="showSecretOriginal()" ontouchend="showSecretQuantized()">
                                 <i class="fa-solid fa-eye"></i> 按住对比原图
                             </button>
                         </div>
@@ -557,30 +562,59 @@
         function setSecretTool(mode) {
             secretToolMode = mode;
             const btnDraw = document.getElementById('btnToolDraw');
+            const btnDefault = document.getElementById('btnToolDefault');
             const btnUpload = document.getElementById('btnToolUpload');
             const drawControls = document.getElementById('drawControls');
             const imageControls = document.getElementById('imageControls');
 
+            // Reset classes
+            [btnDraw, btnDefault, btnUpload].forEach(btn => {
+                btn.className = "tool-btn tool-btn-normal";
+            });
+
             if (mode === 'draw') {
                 btnDraw.className = "tool-btn tool-btn-selected";
-                btnUpload.className = "cursor-pointer tool-btn tool-btn-normal";
                 drawControls.classList.remove('hidden');
                 imageControls.classList.add('hidden');
                 
                 if(originalSecretImgData) {
                     clearCanvas(); 
                 }
-                
                 secretCanvas.style.pointerEvents = 'auto';
 
             } else if (mode === 'image') {
-                btnDraw.className = "tool-btn tool-btn-normal";
-                btnUpload.className = "cursor-pointer tool-btn tool-btn-selected";
+                // Determine which button triggered this (can be refined but for now we just show image mode active)
+                // We keep 'upload' as the active look if uploaded, but user might click default
                 drawControls.classList.add('hidden');
                 imageControls.classList.remove('hidden');
                 
                 secretCanvas.style.pointerEvents = 'none';
             }
+        }
+
+        // Add handler for loading default
+        function loadDefaultSecret() {
+            setSecretTool('image');
+            document.getElementById('btnToolDefault').className = "tool-btn tool-btn-selected"; // Highlight active
+            
+            const img = new Image();
+            img.onload = () => {
+                const ratio = Math.max(CANVAS_WIDTH / img.width, CANVAS_HEIGHT / img.height);
+                const x = (CANVAS_WIDTH - img.width * ratio) / 2;
+                const y = (CANVAS_HEIGHT - img.height * ratio) / 2;
+                
+                ctxSecret.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctxSecret.fillStyle = "#000000";
+                ctxSecret.fillRect(0,0,CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctxSecret.drawImage(img, 0, 0, img.width, img.height, x, y, img.width * ratio, img.height * ratio);
+                
+                originalSecretImgData = ctxSecret.getImageData(0,0,CANVAS_WIDTH, CANVAS_HEIGHT);
+                quantizeSecretCanvas();
+            };
+            img.onerror = () => {
+                alert('未找到 ./key.png');
+            };
+            img.src = './key.png';
         }
 
 
@@ -688,6 +722,9 @@
         document.getElementById('secretUpload').addEventListener('change', function(e) {
             if (e.target.files && e.target.files[0]) {
                 setSecretTool('image');
+                document.getElementById('btnToolUpload').classList.add('tool-btn-selected'); // Highlight active
+                document.getElementById('btnToolUpload').classList.remove('tool-btn-normal');
+
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const img = new Image();
