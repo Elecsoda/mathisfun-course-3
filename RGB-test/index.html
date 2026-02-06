@@ -1,126 +1,405 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RGB调色板</title>
+    <title>高级RGB调色板 - 凯撒密码版</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f5f5f5;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
             margin: 0;
-            padding: 0;
+            padding: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            flex-direction: column;
+            min-height: 100vh;
         }
+
         .container {
-            text-align: center;
             background-color: #fff;
-            border-radius: 10px;
-            padding: 40px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            width: 350px;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 450px;
+            box-sizing: border-box;
         }
+
         h2 {
             font-size: 24px;
             color: #333;
+            margin-top: 0;
             margin-bottom: 20px;
-        }
-        p {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 20px;
-        }
-        input[type="number"] {
-            width: 60px;
-            padding: 10px;
-            margin: 5px;
-            font-size: 16px;
             text-align: center;
-            border: 2px solid #ddd;
+            font-weight: 600;
+        }
+
+        h3 {
+            font-size: 18px;
+            color: #555;
+            margin: 20px 0 15px 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .label-text {
+            width: 50px;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+
+        .label-r { color: #ff4d4d; }
+        .label-g { color: #2ecc71; }
+        .label-b { color: #3498db; }
+        .label-shift { color: #9b59b6; }
+
+        input[type="range"] {
+            flex-grow: 1;
+            cursor: pointer;
+            height: 6px;
             border-radius: 5px;
+            appearance: none;
+            background: #e0e0e0;
+            outline: none;
+        }
+
+        /* 滑块样式 */
+        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform 0.1s; }
+        
+        #r-range::-webkit-slider-thumb { background: #ff4d4d; }
+        #g-range::-webkit-slider-thumb { background: #2ecc71; }
+        #b-range::-webkit-slider-thumb { background: #3498db; }
+        
+        /* 凯撒密码部分的滑块颜色 */
+        .shift-slider::-webkit-slider-thumb { background: #9b59b6 !important; }
+
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+
+        input[type="number"] {
+            width: 50px;
+            padding: 6px;
+            font-size: 14px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
             outline: none;
             transition: border-color 0.3s ease;
         }
+        
         input[type="number"]:focus {
-            border-color: #007bff;
+            border-color: #666;
         }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            color: white;
-            background: linear-gradient(135deg, #007bff, #00d4ff);
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-        button:hover {
-            background: linear-gradient(135deg, #0056b3, #00a1cc);
-        }
+
         .color-display {
-            margin-top: 20px;
+            margin-top: 25px;
             height: 100px;
-            border-radius: 10px;
+            border-radius: 12px;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             font-size: 18px;
-            color: white;
             font-weight: bold;
-            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s ease;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+            border: 1px solid rgba(0,0,0,0.1);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            transition: background-color 0.1s ease;
         }
-        .alert {
+
+        .color-info {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin: 2px 0;
+            font-family: monospace;
             font-size: 16px;
-            color: red;
+        }
+        
+        .caesar-options {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
             margin-top: 10px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #555;
+            justify-content: space-between;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            margin-right: 8px;
+        }
+
+        .shift-controls {
+            transition: all 0.3s ease;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .calculation-preview {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+            text-align: center;
+            font-family: monospace;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>RGB调色板</h2>
-    <p>请输入RGB的数值（0-255）：</p>
+    <h2>RGB 调色板</h2>
     
-    <input type="number" id="r" placeholder="R" min="0" max="255">
-    <input type="number" id="g" placeholder="G" min="0" max="255">
-    <input type="number" id="b" placeholder="B" min="0" max="255">
-    
-    <br><br>
-    <button onclick="updateColor()">更新颜色</button>
+    <!-- 基础颜色控制 -->
+    <div class="control-group">
+        <span class="label-text label-r">红 (R)</span>
+        <input type="range" id="r-range" min="0" max="255" value="100">
+        <input type="number" id="r-input" min="0" max="255" value="100">
+    </div>
+
+    <div class="control-group">
+        <span class="label-text label-g">绿 (G)</span>
+        <input type="range" id="g-range" min="0" max="255" value="150">
+        <input type="number" id="g-input" min="0" max="255" value="150">
+    </div>
+
+    <div class="control-group">
+        <span class="label-text label-b">蓝 (B)</span>
+        <input type="range" id="b-range" min="0" max="255" value="200">
+        <input type="number" id="b-input" min="0" max="255" value="200">
+    </div>
+
+    <!-- 凯撒密码控制区 -->
+    <div class="caesar-options">
+        <div class="checkbox-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="caesar-toggle"> 启用颜色凯撒密码
+            </label>
+            <label class="checkbox-label" id="independent-label" style="display:none;">
+                <input type="checkbox" id="separate-toggle"> 独立通道
+            </label>
+        </div>
+
+        <div id="caesar-controls" class="hidden">
+            <!-- 全局位移 -->
+            <div id="global-shift-group" class="control-group">
+                <span class="label-text label-shift">偏移</span>
+                <input type="range" id="shift-global-range" class="shift-slider" min="0" max="255" value="100">
+                <input type="number" id="shift-global-input" min="0" max="255" value="100">
+            </div>
+
+            <!-- 独立位移 (默认隐藏) -->
+            <div id="separate-shift-group" class="hidden">
+                <div class="control-group">
+                    <span class="label-text label-r">R+</span>
+                    <input type="range" id="shift-r-range" class="shift-slider" min="0" max="255" value="100">
+                    <input type="number" id="shift-r-input" min="0" max="255" value="100">
+                </div>
+                <div class="control-group">
+                    <span class="label-text label-g">G+</span>
+                    <input type="range" id="shift-g-range" class="shift-slider" min="0" max="255" value="100">
+                    <input type="number" id="shift-g-input" min="0" max="255" value="100">
+                </div>
+                <div class="control-group">
+                    <span class="label-text label-b">B+</span>
+                    <input type="range" id="shift-b-range" class="shift-slider" min="0" max="255" value="100">
+                    <input type="number" id="shift-b-input" min="0" max="255" value="100">
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div id="colorDisplay" class="color-display">
-        <span>颜色显示</span>
+        <div id="rgbText" class="color-info">RGB(100, 150, 200)</div>
     </div>
-    
-    <div id="alert" class="alert"></div>
+    <div id="calcPreview" class="calculation-preview"></div>
 </div>
 
 <script>
-    function updateColor() {
-        var r = document.getElementById("r").value;
-        var g = document.getElementById("g").value;
-        var b = document.getElementById("b").value;
-        var alertBox = document.getElementById("alert");
-        
-        // 清空警告消息
-        alertBox.innerHTML = "";
+    // 基础 DOM 元素
+    const rRange = document.getElementById('r-range');
+    const rInput = document.getElementById('r-input');
+    const gRange = document.getElementById('g-range');
+    const gInput = document.getElementById('g-input');
+    const bRange = document.getElementById('b-range');
+    const bInput = document.getElementById('b-input');
+    
+    // 凯撒密码 DOM 元素
+    const caesarToggle = document.getElementById('caesar-toggle');
+    const separateToggle = document.getElementById('separate-toggle');
+    const independentLabel = document.getElementById('independent-label');
+    const caesarControls = document.getElementById('caesar-controls');
+    
+    const globalShiftGroup = document.getElementById('global-shift-group');
+    const separateShiftGroup = document.getElementById('separate-shift-group');
 
-        // 校验输入是否在有效范围内
-        if (r >= 0 && r <= 255 && g >= 0 && g <= 255 && b >= 0 && b <= 255) {
-            // 设置背景颜色
-            var color = `rgb(${r}, ${g}, ${b})`;
-            document.getElementById("colorDisplay").style.backgroundColor = color;
-            document.getElementById("colorDisplay").innerText = `RGB(${r}, ${g}, ${b})`;
-        } else {
-            alertBox.innerHTML = "请输入有效的RGB值（0-255）。";
-        }
+    const shiftGlobalRange = document.getElementById('shift-global-range');
+    const shiftGlobalInput = document.getElementById('shift-global-input');
+    
+    const shiftRRange = document.getElementById('shift-r-range');
+    const shiftRInput = document.getElementById('shift-r-input');
+    const shiftGRange = document.getElementById('shift-g-range');
+    const shiftGInput = document.getElementById('shift-g-input');
+    const shiftBRange = document.getElementById('shift-b-range');
+    const shiftBInput = document.getElementById('shift-b-input');
+
+    const colorDisplay = document.getElementById('colorDisplay');
+    const rgbText = document.getElementById('rgbText');
+    const calcPreview = document.getElementById('calcPreview');
+
+    // 辅助函数：限制数值
+    function clamp(value) {
+        return Math.max(0, Math.min(255, value));
     }
+
+    // 辅助函数：文本颜色反转
+    function getContrastYIQ(r, g, b){
+        var yiq = ((r*299)+(g*587)+(b*114))/1000;
+        return (yiq >= 128) ? 'black' : 'white';
+    }
+
+    // 核心更新逻辑
+    function updateColor() {
+        // 获取基础值
+        const baseR = parseInt(rRange.value) || 0;
+        const baseG = parseInt(gRange.value) || 0;
+        const baseB = parseInt(bRange.value) || 0;
+
+        let finalR = baseR;
+        let finalG = baseG;
+        let finalB = baseB;
+        
+        let shiftR = 0, shiftG = 0, shiftB = 0;
+        let isCaesarActive = caesarToggle.checked;
+
+        if (isCaesarActive) {
+            if (separateToggle.checked) {
+                // 独立通道模式
+                shiftR = parseInt(shiftRRange.value) || 0;
+                shiftG = parseInt(shiftGRange.value) || 0;
+                shiftB = parseInt(shiftBRange.value) || 0;
+            } else {
+                // 全局模式
+                const globalVal = parseInt(shiftGlobalRange.value) || 0;
+                shiftR = shiftG = shiftB = globalVal;
+            }
+
+            // 应用凯撒位移 (模 256)
+            finalR = (baseR + shiftR) % 256;
+            finalG = (baseG + shiftG) % 256;
+            finalB = (baseB + shiftB) % 256;
+            
+            // 显示计算过程
+            calcPreview.innerHTML = `R:(${baseR}+${shiftR})%256 | G:(${baseG}+${shiftG})%256 | B:(${baseB}+${shiftB})%256`;
+        } else {
+            calcPreview.innerHTML = "";
+        }
+
+        const colorString = `rgb(${finalR}, ${finalG}, ${finalB})`;
+
+        // 更新UI
+        colorDisplay.style.backgroundColor = colorString;
+        rgbText.innerText = `RGB(${finalR}, ${finalG}, ${finalB})`;
+
+        // 智能文字颜色
+        const textColor = getContrastYIQ(finalR, finalG, finalB);
+        colorDisplay.style.color = textColor;
+        document.querySelectorAll('.color-info').forEach(el => {
+            el.style.background = textColor === 'white' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.4)';
+        });
+    }
+
+    // 绑定输入同步逻辑
+    function bindInputs(rangeEl, inputEl) {
+        rangeEl.addEventListener('input', function() {
+            inputEl.value = this.value;
+            updateColor();
+        });
+
+        inputEl.addEventListener('input', function() {
+            let val = parseInt(this.value);
+            if (isNaN(val)) val = 0;
+            if (val > 255) val = 255; 
+            rangeEl.value = val;
+            updateColor();
+        });
+
+        inputEl.addEventListener('blur', function() {
+            let val = parseInt(this.value);
+            if (isNaN(val)) val = 0;
+            val = clamp(val);
+            this.value = val;
+            rangeEl.value = val;
+            updateColor();
+        });
+    }
+
+    // 绑定所有基础输入
+    bindInputs(rRange, rInput);
+    bindInputs(gRange, gInput);
+    bindInputs(bRange, bInput);
+
+    // 绑定凯撒输入
+    bindInputs(shiftGlobalRange, shiftGlobalInput);
+    bindInputs(shiftRRange, shiftRInput);
+    bindInputs(shiftGRange, shiftGInput);
+    bindInputs(shiftBRange, shiftBInput);
+
+    // 切换凯撒模式逻辑
+    caesarToggle.addEventListener('change', function() {
+        if (this.checked) {
+            caesarControls.classList.remove('hidden');
+            independentLabel.style.display = 'flex';
+        } else {
+            caesarControls.classList.add('hidden');
+            independentLabel.style.display = 'none';
+        }
+        updateColor();
+    });
+
+    // 切换独立/全局模式逻辑
+    separateToggle.addEventListener('change', function() {
+        if (this.checked) {
+            globalShiftGroup.classList.add('hidden');
+            separateShiftGroup.classList.remove('hidden');
+            // 同步全局值到独立值，方便用户开始
+            const currentGlobal = shiftGlobalRange.value;
+            shiftRRange.value = shiftRInput.value = currentGlobal;
+            shiftGRange.value = shiftGInput.value = currentGlobal;
+            shiftBRange.value = shiftBInput.value = currentGlobal;
+        } else {
+            globalShiftGroup.classList.remove('hidden');
+            separateShiftGroup.classList.add('hidden');
+        }
+        updateColor();
+    });
+
+    // 初始化
+    updateColor();
 </script>
 
 </body>
