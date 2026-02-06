@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>破解message3</title>
+  <style>
+    body {
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      margin: 20px;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    /* 顶部工具栏水平排布 */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.05);
+      gap: 10px; /* 工具之间的间隙 */
+      margin-bottom: 20px;
+    }
+    .toolbar label {
+      font-weight: 600;
+      margin-right: 5px;
+    }
+    button, input, select {
+      font-size: 14px;
+      margin: 5px 0;
+    }
+
+    /* 原图与条块容器、结果图 */
+    #originalCanvas {
+      display: block;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      max-width: 100%; /* 可让原图随浏览器变小，但不影响像素读取 */
+    }
+
+    #stripContainer {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.05);
+      min-height: 130px;
+      display: flex;
+      gap: 5px;
+      overflow-x: auto; /* 横向滚动 */
+      margin-bottom: 20px;
+    }
+    .stripItem {
+      display: inline-block;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 3px;
+      cursor: move;
+      background-color: #fff;
+      transition: background-color 0.2s ease;
+    }
+    .stripItem.dragover {
+      border-color: #007bff;
+      background-color: #e7f1ff;
+    }
+    .stripImg {
+      display: block;
+      max-width: 120px;
+      max-height: 120px;
+    }
+
+    /* 结果图 */
+    #resultCanvas {
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      display: block;
+      transform-origin: top left; /* 以左上角为缩放基准 */
+    }
+    /* 简单按钮组样式 */
+    .btn {
+      background: #007bff;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .btn:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+<h1>破解message3</h1>
+
+<!-- 顶部工具栏 -->
+<div class="toolbar">
+  <div>
+    <button id="loadDefaultBtn" class="btn">加载默认图(message3.png)</button>
+    <input type="file" id="fileInput" accept="image/*">
+  </div>
+  <div>
+    <label>切割方向</label>
+    <select id="cutDirection">
+      <option value="vertical">竖向</option>
+      <option value="horizontal">横向</option>
+    </select>
+  </div>
+  <div>
+    <label>切割条数</label>
+    <input type="number" id="numSlices" value="5" min="1" style="width:60px;">
+  </div>
+  <div>
+    <button id="sliceBtn" class="btn">切割</button>
+  </div>
+  <div>
+    <label>结果缩放比</label>
+    <input type="number" id="scaleInput" value="1" step="0.1" style="width:60px;">
+  </div>
+</div>
+
+<!-- 原图预览 -->
+<canvas id="originalCanvas"></canvas>
+
+<!-- 条块容器(拖拽区) -->
+<h3>条块列表(可插入式拖拽)</h3>
+<div id="stripContainer"></div>
+
+<!-- 结果图 -->
+<h3>重拼结果</h3>
+<canvas id="resultCanvas"></canvas>
+
+<script>
+/*******************************************************
+ * 全局变量 & DOM
+ *******************************************************/
+const fileInput = document.getElementById('fileInput');
+const loadDefaultBtn = document.getElementById('loadDefaultBtn');
+const cutDirectionSelect = document.getElementById('cutDirection');
+const numSlicesInput = document.getElementById('numSlices');
+const sliceBtn = document.getElementById('sliceBtn');
+const scaleInput = document.getElementById('scaleInput');
+
+const originalCanvas = document.getElementById('originalCanvas');
+const originalCtx = originalCanvas.getContext('2d');
+const stripContainer = document.getElementById('stripContainer');
+const resultCanvas = document.getElementById('resultCanvas');
+const resultCtx = resultCanvas.getContext('2d');
+
+let loadedImage = new Image();
+let slices = []; // 存储 { id, canvas }
+let dragSrcEl = null; // 当前拖拽源
+
+/*******************************************************
+ * 1. 加载图片
+ *******************************************************/
+window.addEventListener('load', () => {
+  loadImage('message3.png');
+});
+loadDefaultBtn.addEventListener('click', () => {
+  loadImage('message3.png');
+});
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) {
+    loadImage(URL.createObjectURL(file));
+  }
+});
+
+function loadImage(src) {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    loadedImage = img;
+    // 绘制到 originalCanvas 显示
+    originalCanvas.width = img.width;
+    originalCanvas.height = img.height;
+    originalCtx.drawImage(img, 0, 0, img.width, img.height);
+    alert('图片加载成功！');
+  };
+  img.onerror = () => {
+    alert('图片加载失败');
+  };
+  img.src = src;
+}
+
+/*******************************************************
+ * 2. 切割图像
+ *******************************************************/
+sliceBtn.addEventListener('click', () => {
+  if (!loadedImage || !loadedImage.width) {
+    alert('请先加载图片！');
+    return;
+  }
+  const direction = cutDirectionSelect.value;
+  const n = parseInt(numSlicesInput.value) || 1;
+
+  slices = sliceImage(loadedImage, direction, n);
+
+  // 清空容器, 创建拖拽条块
+  stripContainer.innerHTML = '';
+  slices.forEach((sli, idx) => {
+    createStripItem(sli, idx);
+  });
+
+  // 初次生成结果
+  drawResultCanvas();
+  alert(`已切割${n}条!(方向:${direction})`);
+});
+
+function sliceImage(img, direction, n) {
+  const w = img.width, h = img.height;
+  const result = [];
+  if (direction === 'vertical') {
+    const sliceW = w / n;
+    for (let i=0; i<n; i++){
+      const x = i * sliceW;
+      const c = document.createElement('canvas');
+      c.width = Math.ceil(sliceW);
+      c.height = h;
+      c.getContext('2d').drawImage(img, x, 0, sliceW, h, 0, 0, c.width, c.height);
+      result.push({ id: i, canvas: c });
+    }
+  } else {
+    const sliceH = h / n;
+    for (let i=0; i<n; i++){
+      const y = i * sliceH;
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = Math.ceil(sliceH);
+      c.getContext('2d').drawImage(img, 0, y, w, sliceH, 0, 0, c.width, c.height);
+      result.push({ id: i, canvas: c });
+    }
+  }
+  return result;
+}
+
+/*******************************************************
+ * 3. 创建拖拽条块 (插入式)
+ *******************************************************/
+function createStripItem(sliceObj, idx) {
+  const div = document.createElement('div');
+  div.className = 'stripItem';
+  div.draggable = true;
+  div.dataset.index = idx;
+
+  const thumbUrl = sliceObj.canvas.toDataURL();
+  const imgEl = document.createElement('img');
+  imgEl.src = thumbUrl;
+  imgEl.className = 'stripImg';
+
+  div.appendChild(imgEl);
+  stripContainer.appendChild(div);
+
+  // 事件
+  div.addEventListener('dragstart', handleDragStart);
+  div.addEventListener('dragover', handleDragOver);
+  div.addEventListener('dragleave', handleDragLeave);
+  div.addEventListener('drop', handleDrop);
+}
+
+function handleDragStart(e) {
+  dragSrcEl = e.currentTarget;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', e.currentTarget.outerHTML);
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  this.classList.add('dragover');
+}
+function handleDragLeave(e) {
+  this.classList.remove('dragover');
+}
+
+function handleDrop(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  this.classList.remove('dragover');
+
+  if (dragSrcEl === this) return;
+
+  // 1) 找到srcIndex、targetIndex
+  const srcIndex = parseInt(dragSrcEl.dataset.index);
+  const targetIndex = parseInt(this.dataset.index);
+
+  // 2) 判断鼠标位置 => 插入到前还是后
+  const bounding = this.getBoundingClientRect();
+  const midpoint = bounding.x + bounding.width/2; 
+  let insertBefore = ( e.clientX < midpoint );
+
+  // 3) 从 slices[] 移除src
+  const movedItem = slices[srcIndex];
+  slices.splice(srcIndex, 1);
+
+  // 4) 计算 finalIndex
+  let finalIndex;
+  if (insertBefore) {
+    // 插到目标前
+    if (srcIndex < targetIndex) {
+      finalIndex = (targetIndex-1 < 0) ? 0 : targetIndex-1;
+    } else {
+      finalIndex = targetIndex;
+    }
+  } else {
+    // 插到目标后
+    if (srcIndex < targetIndex) {
+      finalIndex = targetIndex-1 + 1;
+    } else {
+      finalIndex = targetIndex + 1;
+    }
+  }
+  // 边界修正
+  if (finalIndex < 0) finalIndex = 0;
+  if (finalIndex > slices.length) finalIndex = slices.length;
+
+  slices.splice(finalIndex, 0, movedItem);
+
+  // 重新渲染
+  refreshStripContainer();
+  drawResultCanvas();
+}
+
+function refreshStripContainer() {
+  stripContainer.innerHTML = '';
+  slices.forEach((sl, idx) => {
+    createStripItem(sl, idx);
+  });
+}
+
+/*******************************************************
+ * 4. 绘制结果图(可缩放)
+ *******************************************************/
+function drawResultCanvas() {
+  if (!slices.length) return;
+  const direction = cutDirectionSelect.value;
+  let totalW=0, totalH=0;
+  if (direction==='vertical') {
+    totalH = slices[0].canvas.height;
+    totalW = slices.reduce((acc,s)=> acc + s.canvas.width, 0);
+  } else {
+    totalW = slices[0].canvas.width;
+    totalH = slices.reduce((acc,s)=> acc + s.canvas.height, 0);
+  }
+  resultCanvas.width = totalW;
+  resultCanvas.height = totalH;
+  resultCtx.clearRect(0, 0, totalW, totalH);
+
+  let offsetX=0, offsetY=0;
+  for (let i=0; i<slices.length; i++){
+    const piece = slices[i];
+    if (direction==='vertical') {
+      resultCtx.drawImage(piece.canvas, offsetX, 0);
+      offsetX += piece.canvas.width;
+    } else {
+      resultCtx.drawImage(piece.canvas, 0, offsetY);
+      offsetY += piece.canvas.height;
+    }
+  }
+  // 绘制完后，再根据 scaleInput 来设置显示比例
+  applyScale();
+}
+
+/*******************************************************
+ * 5. 结果图缩放
+ *******************************************************/
+scaleInput.addEventListener('change', applyScale);
+scaleInput.addEventListener('input', applyScale);
+
+function applyScale() {
+  let scaleVal = parseFloat(scaleInput.value) || 1;
+  if (scaleVal <= 0) scaleVal = 1; 
+  resultCanvas.style.transform = `scale(${scaleVal})`;
+}
+</script>
+</body>
+</html>
