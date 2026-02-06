@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>隐写术工具 - 框选与像素矩阵</title>
   <style>
     /* 全局样式 */
@@ -16,12 +16,14 @@
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
+      overscroll-behavior: none; /* 防止手机端下拉刷新效果干扰 */
     }
 
     h1 {
       color: #444;
       margin-top: 20px;
       margin-bottom: 10px;
+      font-size: 1.5rem; /* 手机端标题稍微调小 */
     }
 
     /* 容器布局 */
@@ -29,10 +31,10 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      width: 90%;
-      max-width: 1200px;
-      margin: 20px auto;
-      padding: 20px;
+      width: 95%;
+      max-width: 1400px;
+      margin: 10px auto; /* 减小边距 */
+      padding: 15px;
       background-color: #fff;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       border-radius: 8px;
@@ -41,29 +43,19 @@
     /* 使用说明样式 */
     .instructions {
       text-align: left;
-      margin-bottom: 20px;
-      padding: 15px;
+      margin-bottom: 15px;
+      padding: 10px;
       background-color: #e9ecef;
       border-radius: 5px;
       width: 100%;
       box-sizing: border-box;
+      font-size: 14px;
     }
 
     .instructions h4 {
-      text-align: center; /* 将 <h4> 元素居中 */
-    }
-
-    .instructions h2 {
-      margin-top: 10px;
-      margin-bottom: 10px;
-    }
-
-    .instructions ol {
-      padding-left: 20px;
-    }
-
-    .instructions li {
-      margin-bottom: 8px;
+      text-align: center;
+      margin: 0;
+      font-weight: normal;
     }
 
     /* 文件输入和画布区域 */
@@ -74,32 +66,22 @@
       width: 100%;
     }
 
-    @media (min-width: 768px) {
-      .top-section {
-        flex-direction: column;
-        align-items: center;
-      }
-    }
-
     /* 文件输入样式 */
     .file-input {
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       width: 100%;
       text-align: center;
     }
 
     .file-input input {
-      padding: 10px;
+      padding: 8px;
       border: 1px solid #ccc;
       border-radius: 5px;
       cursor: pointer;
       transition: border-color 0.3s;
-      width: 80%;
+      width: 100%;
       max-width: 300px;
-    }
-
-    .file-input input:hover {
-      border-color: #007bff;
+      box-sizing: border-box; /* 确保不撑破 */
     }
 
     /* 画布样式 */
@@ -109,16 +91,21 @@
       justify-content: center;
       align-items: center;
       width: 100%;
+      overflow: hidden; /* 防止画布溢出 */
+      user-select: none;
+      touch-action: none; /* 关键：防止触摸滚动 */
+      background-color: #eee; /* 给个背景色，方便看边界 */
+      border-radius: 8px;
     }
 
     canvas {
-      border: 2px solid #888;
-      border-radius: 8px;
+      /* 移除边框，改用容器控制，或者保持 */
+      border: 1px solid #888;
       cursor: crosshair;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       max-width: 100%;
       height: auto;
-      touch-action: none; /* 防止触摸滚动 */
+      display: block;
     }
 
     /* 控制按钮样式 */
@@ -126,97 +113,129 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      margin: 20px 0;
-      gap: 10px;
+      margin: 15px 0;
+      gap: 8px;
       width: 100%;
     }
 
     .controls button {
-      padding: 10px 20px;
-      font-size: 14px;
+      padding: 12px 10px; /* 增加点击区域高度，适合手指 */
+      font-size: 13px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
       transition: background-color 0.3s, transform 0.2s;
-      min-width: 140px;
-    }
-
-    .controls button:hover:not(:disabled) {
-      transform: translateY(-2px);
+      flex: 1 0 45%; /* 手机上一行两个 */
+      max-width: 150px;
     }
 
     .controls button:active:not(:disabled) {
-      transform: translateY(0);
+      transform: scale(0.98); /* 更有按压感 */
     }
 
     .controls button:disabled {
-      background-color: #ccc;
+      background-color: #e0e0e0;
+      color: #999;
       cursor: not-allowed;
     }
 
-    /* 各按钮颜色 */
-    #clearLsb {
-      background-color: #ff9800;
-      color: white;
-    }
-
-    #addOneBtn {
-      background-color: #4caf50;
-      color: white;
-    }
-
-    #highlightOddBtn {
-      background-color: #9c27b0;
-      color: white;
-    }
-
-    #saveChangesBtn {
-      background-color: #2196f3;
-      color: white;
-    }
-
-    #clearSelection {
-      background-color: #f44336;
-      color: white;
-    }
+    #clearLsb { background-color: #ff9800; color: white; }
+    #addOneBtn { background-color: #4caf50; color: white; }
+    #highlightOddBtn { background-color: #9c27b0; color: white; }
+    #saveChangesBtn { background-color: #2196f3; color: white; }
+    #clearSelection { background-color: #f44336; color: white; }
 
     /* 像素矩阵样式 */
     .matrix-section {
       width: 100%;
+      position: relative;
     }
 
     .matrix-section h2 {
       margin-bottom: 10px;
+      text-align: center;
+      font-size: 1.2rem;
     }
 
     .matrix-container {
-      overflow-x: auto;
       width: 100%;
+      /* 关键：防止在矩阵上滑动时触发页面滚动，允许流畅拖选 */
+      touch-action: none; 
     }
 
     .matrix {
       display: grid;
-      grid-template-columns: repeat(auto-fill, 80px);
-      gap: 2px;
+      gap: 1px;
       margin: 0 auto;
-      user-select: none; /* 防止文本被选中 */
+      user-select: none;
+      width: 100%;
+      background-color: #ccc; /* 缝隙颜色 */
+      border: 1px solid #ccc;
     }
 
     .matrix div {
-      padding: 10px;
       background: #ffffff;
-      border: 1px solid #ddd;
-      font-size: 12px;
       text-align: center;
       cursor: pointer;
       box-sizing: border-box;
-      border-radius: 4px;
-      transition: background-color 0.3s, color 0.3s;
+      border-radius: 0;
+      
+      /* 布局设置 */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      
+      /* 保持正方形 */
+      aspect-ratio: 1 / 1; 
+      position: relative;
+      
+      /* 字体设置 */
+      font-size: 11px;
+      line-height: 1.1;
+      color: #333;
+      overflow: hidden;
     }
 
+    .matrix div span {
+      display: block;
+      white-space: nowrap;
+    }
+
+    /* 动态样式类 - 根据格子数量调整 */
+    
+    .matrix.medium-density div {
+      font-size: 9px;
+    }
+
+    .matrix.high-density div {
+      font-size: 10px;
+    }
+    
+    .matrix.high-density div .content-wrapper {
+        transform: scale(0.85);
+        transform-origin: center;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    /* 手机端超高密度优化：如果格子太小，进一步缩小 */
+    .matrix.super-density div .content-wrapper {
+        transform: scale(0.60); 
+        width: 160%; 
+        margin-left: -30%; 
+    }
+
+    /* 选中和交互样式 */
     .matrix div.selected {
-      background-color: #007bff;
+      background-color: #007bff !important;
       color: #fff;
+    }
+    
+    .matrix div.selected .content-wrapper {
+        color: #fff;
     }
 
     .matrix div.odd {
@@ -225,31 +244,60 @@
     }
 
     .matrix div.selected.odd {
-      background-color: #c2185b;
+      background-color: #c2185b !important;
+    }
+
+    /* 放大镜样式 - 优化手机端显示 */
+    #magnifier {
+        position: fixed;
+        display: none;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 8px;
+        pointer-events: none;
+        z-index: 2000; /* 确保在最上层 */
+        font-size: 13px;
+        font-family: monospace;
+        line-height: 1.5;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        border: 1px solid rgba(255,255,255,0.2);
+        backdrop-filter: blur(4px);
+        min-width: 100px;
+        white-space: nowrap;
+    }
+
+    #magnifier .color-preview {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 1px solid #fff;
+        margin-right: 8px;
+        vertical-align: -2px;
     }
 
     /* 响应式设计 */
     @media (max-width: 600px) {
+      .container {
+        width: 100%;
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 10px;
+      }
+      
       .controls button {
-        width: 100%;
-        margin: 5px 0;
+        padding: 12px 5px; /* 稍微减小内边距防止文字换行 */
+        font-size: 12px;
       }
 
+      /* 手机端进一步缩小字体 */
       .matrix div {
-        padding: 8px;
-        font-size: 10px;
+          font-size: 8px;
       }
-
-      .top-section {
-        flex-direction: column;
-      }
-
-      .file-input {
-        width: 100%;
-      }
-
-      .canvas-container {
-        width: 100%;
+      
+      .instructions h4 {
+        font-size: 13px;
       }
     }
   </style>
@@ -259,19 +307,7 @@
   <div class="container">
     <!-- 使用说明 -->
     <div class="instructions">
-      <h4>提示：图片中框选位置后，会出现像素值矩阵，这些数字有什么规律？</h4>
-      <!-- <h2>使用说明</h2>
-      <ol>
-        <li>点击“选择文件”按钮，加载你想要进行隐写术操作的图片。默认会加载本地的 <code>tree.png</code>。</li>
-        <li>加载图片后，可以点击“末位清零”按钮，将图片所有像素的 RGB 通道的末位设置为 0。</li>
-        <li>在画布上按下鼠标左键（或触控设备上触摸并按下），拖动以选择一个矩形区域，最大选择范围为 50x50 像素。</li>
-        <li>松开鼠标后，选定区域的像素矩阵会显示在下方。</li>
-        <li>在像素矩阵中，点击或拖动以选择一个或多个像素格。选中的像素格会高亮显示。</li>
-        <li>点击“选中像素加1”按钮，将所有选中像素的 RGB 值各自加1。</li>
-        <li>点击“奇数高亮”按钮，将矩阵中所有 RGB 值均为奇数的像素格高亮显示。</li>
-        <li>完成所有修改后，点击“保存修改”按钮，将修改后的图片下载到本地。</li>
-        <li>点击“清除选择”按钮，取消当前的区域选择和所有像素选择。</li>
-      </ol> -->
+      <h4>提示：图片中框选位置后，会出现像素值矩阵。点击或拖动选择像素点。</h4>
     </div>
 
     <!-- 文件输入和画布区域 -->
@@ -302,6 +338,9 @@
     </div>
   </div>
 
+  <!-- 放大镜元素 -->
+  <div id="magnifier"></div>
+
   <script>
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
@@ -312,6 +351,7 @@
     const saveChangesBtn = document.getElementById("saveChangesBtn");
     const clearSelectionBtn = document.getElementById("clearSelection");
     const highlightOddBtn = document.getElementById("highlightOddBtn");
+    const magnifier = document.getElementById("magnifier");
 
     let imageData = null; // 原始图片数据
     let selection = null; // 当前选中区域
@@ -320,18 +360,28 @@
     let selectedCells = new Set(); // 记录被选中的像素格索引
     let isDraggingMatrix = false; // 是否在拖动像素矩阵选择
 
-    const MAX_SELECTION_SIZE = 50; // 最大选择尺寸
+    const MAX_SELECTION_SIZE = 50; 
 
     // 加载图片函数
     function loadImage(src) {
       const img = new Image();
-      // 移除 crossOrigin，确保本地图片可以正确加载
-      // img.crossOrigin = ""; // 移除这一行
       img.onload = () => {
+        // 简单的自适应：如果图片太大，在手机上可能显示不全，这里不做强制压缩分辨率，依赖CSS显示
+        // 但为了操作体验，重置画布大小
         canvas.width = img.width;
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
         imageData = ctx.getImageData(0, 0, img.width, img.height);
+        
+        resetUI();
+      };
+      img.onerror = () => {
+        console.log("Default image not found.");
+      };
+      img.src = src;
+    }
+
+    function resetUI() {
         clearLsbBtn.disabled = false;
         saveChangesBtn.disabled = true;
         clearSelectionBtn.disabled = true;
@@ -339,19 +389,13 @@
         highlightOddBtn.disabled = true;
         matrixContainer.innerHTML = "";
         selectedCells.clear();
-      };
-      img.onerror = () => {
-        alert("无法加载默认图片，请确保 'tree.png' 存在于相同目录下。");
-      };
-      img.src = src;
+        selection = null;
     }
 
-    // 默认加载本地文件 tree.png
     window.addEventListener("load", () => {
       loadImage('tree.png');
     });
 
-    // 手动加载图片
     imageInput.addEventListener("change", (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -364,57 +408,60 @@
 
     // 末位清零
     clearLsbBtn.addEventListener("click", () => {
-    if (!imageData) return;
-    const data = imageData.data;
-    
-    // 对每个像素的 RGB 通道进行末位清零
-    for (let i = 0; i < data.length; i += 4) {
-        data[i] = data[i] & 0xFE;         // 红色通道
-        data[i + 1] = data[i + 1] & 0xFE; // 绿色通道
-        data[i + 2] = data[i + 2] & 0xFE; // 蓝色通道
-    }
-    
-    // 刷新图像
-    ctx.putImageData(imageData, 0, 0);
-    
-    alert("末位清零完成！可以手动选择像素并嵌入信息。");
-
-    // 刷新选中区域的像素矩阵
-    if (selection) {
-        showMatrix(); // 重新显示选中区域的像素矩阵
-    }
-
-    saveChangesBtn.disabled = false;
+      if (!imageData) return;
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+          data[i] = data[i] & 0xFE;         
+          data[i + 1] = data[i + 1] & 0xFE; 
+          data[i + 2] = data[i + 2] & 0xFE; 
+      }
+      ctx.putImageData(imageData, 0, 0);
+      alert("末位清零完成！");
+      if (selection) {
+          showMatrix(); 
+      }
+      saveChangesBtn.disabled = false;
     });
 
-    // 框选功能（支持触控板和触屏）
+    // 框选功能
     canvas.addEventListener("pointerdown", (event) => {
-      event.preventDefault(); // 防止默认行为
-      if (!imageData) return;
+      if (!imageData || !event.isPrimary) return;
+      
+      event.preventDefault(); 
+      canvas.setPointerCapture(event.pointerId);
       isSelecting = true;
+      
       const rect = canvas.getBoundingClientRect();
-      startX = event.clientX - rect.left;
-      startY = event.clientY - rect.top;
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      startX = (event.clientX - rect.left) * scaleX;
+      startY = (event.clientY - rect.top) * scaleY;
+      
       selection = null;
       selectedCells.clear();
-      matrixContainer.innerHTML = "";
       addOneBtn.disabled = true;
       highlightOddBtn.disabled = true;
       clearSelectionBtn.disabled = true;
+      
+      ctx.putImageData(imageData, 0, 0);
+      matrixContainer.innerHTML = ""; // 清空矩阵，避免视觉干扰
     });
 
     canvas.addEventListener("pointermove", (event) => {
-      event.preventDefault(); // 防止默认行为
       if (!isSelecting || !imageData) return;
+      event.preventDefault(); 
+      
       const rect = canvas.getBoundingClientRect();
-      let endX = event.clientX - rect.left;
-      let endY = event.clientY - rect.top;
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
 
-      // 计算选择框的宽度和高度
+      let endX = (event.clientX - rect.left) * scaleX;
+      let endY = (event.clientY - rect.top) * scaleY;
+
       let width = Math.abs(endX - startX);
       let height = Math.abs(endY - startY);
 
-      // 限制最大选择尺寸
       if (width > MAX_SELECTION_SIZE) {
         width = MAX_SELECTION_SIZE;
         endX = startX + (endX > startX ? MAX_SELECTION_SIZE : -MAX_SELECTION_SIZE);
@@ -424,46 +471,51 @@
         endY = startY + (endY > startY ? MAX_SELECTION_SIZE : -MAX_SELECTION_SIZE);
       }
 
-      const x1 = Math.min(startX, endX);
-      const y1 = Math.min(startY, endY);
-      const x2 = Math.max(startX, endX);
-      const y2 = Math.max(startY, endY);
-
-      // 确保选择区域不超出图片边界
       const maxX = imageData.width;
       const maxY = imageData.height;
-      selection = {
-        x1: Math.floor(Math.min(x1, maxX)),
-        y1: Math.floor(Math.min(y1, maxY)),
-        x2: Math.floor(Math.min(x2, maxX)),
-        y2: Math.floor(Math.min(y2, maxY))
-      };
+      const x1 = Math.floor(Math.max(0, Math.min(Math.min(startX, endX), maxX)));
+      const y1 = Math.floor(Math.max(0, Math.min(Math.min(startY, endY), maxY)));
+      const x2 = Math.floor(Math.max(0, Math.min(Math.max(startX, endX), maxX)));
+      const y2 = Math.floor(Math.max(0, Math.min(Math.max(startY, endY), maxY)));
+
+      selection = { x1, y1, x2, y2 };
       drawSelection();
     });
 
     canvas.addEventListener("pointerup", (event) => {
-      if (!isSelecting || !imageData) return;
+      if (!isSelecting) return;
+      canvas.releasePointerCapture(event.pointerId);
       isSelecting = false;
-      showMatrix();
-      clearSelectionBtn.disabled = false;
-      addOneBtn.disabled = false;
-      highlightOddBtn.disabled = false;
+      
+      if (selection && (selection.x2 - selection.x1 > 0) && (selection.y2 - selection.y1 > 0)) {
+        showMatrix();
+        clearSelectionBtn.disabled = false;
+        addOneBtn.disabled = false;
+        highlightOddBtn.disabled = false;
+        // 移动端体验：框选完自动滚动到矩阵区域
+        if (window.innerWidth <= 600) {
+            matrixContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      } else {
+        selection = null;
+        ctx.putImageData(imageData, 0, 0);
+        matrixContainer.innerHTML = "<div style='padding:20px; color:#666; font-size:14px;'>请拖拽框选一个区域。</div>";
+      }
     });
 
     function drawSelection() {
       ctx.putImageData(imageData, 0, 0);
       if (selection) {
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#ff0000";
+        ctx.lineWidth = 1; 
         ctx.strokeRect(
-          selection.x1,
-          selection.y1,
+          selection.x1 + 0.5, 
+          selection.y1 + 0.5,
           selection.x2 - selection.x1,
           selection.y2 - selection.y1
         );
 
-        // 添加半透明填充（可选）
-        ctx.fillStyle = "rgba(255, 0, 0, 0.1)";
+        ctx.fillStyle = "rgba(255, 0, 0, 0.15)";
         ctx.fillRect(
           selection.x1,
           selection.y1,
@@ -482,8 +534,29 @@
       const data = imageData.data;
 
       matrixContainer.innerHTML = "";
+      
       const columns = x2 - x1;
-      matrixContainer.style.gridTemplateColumns = `repeat(${columns}, 80px)`;
+      const rows = y2 - y1;
+      const totalCells = columns * rows;
+      
+      if (totalCells > 10000) {
+          matrixContainer.innerHTML = "<div style='padding:20px; color:red;'>选择区域过大。</div>";
+          return;
+      }
+
+      matrixContainer.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+      
+      matrixContainer.classList.remove('medium-density', 'high-density', 'super-density');
+
+      if (columns > 40) {
+        matrixContainer.classList.add('super-density'); 
+      } else if (columns > 25) {
+        matrixContainer.classList.add('high-density'); 
+      } else if (columns > 12) {
+        matrixContainer.classList.add('medium-density'); 
+      }
+
+      const fragment = document.createDocumentFragment();
 
       for (let y = y1; y < y2; y++) {
         for (let x = x1; x < x2; x++) {
@@ -493,27 +566,111 @@
           const b = data[index + 2];
 
           const div = document.createElement("div");
-          div.textContent = `R:${r} G:${g} B:${b}`;
+          
+          div.innerHTML = `
+            <div class="content-wrapper">
+                <span>R:${r}</span>
+                <span>G:${g}</span>
+                <span>B:${b}</span>
+            </div>
+          `;
+
           div.dataset.index = index;
+          div.dataset.r = r;
+          div.dataset.g = g;
+          div.dataset.b = b;
+          div.dataset.x = x;
+          div.dataset.y = y;
+          
+          // 优化事件处理，支持 Pointer Events 统一处理鼠标和触摸
           div.addEventListener("pointerdown", (e) => {
+            // 防止默认触摸行为（如长按菜单）
+            // e.preventDefault(); // 注释掉，否则click可能不触发，交给css touch-action
             isDraggingMatrix = true;
             toggleSelect(div, index);
-            e.preventDefault(); // 防止拖动时触发其他事件
+            div.setPointerCapture(e.pointerId); // 捕获指针，确保滑动不出界也能响应
+            showMagnifier(e, r, g, b, x, y);
           });
-          div.addEventListener("pointerover", (e) => {
+          
+          div.addEventListener("pointerenter", (e) => {
             if (isDraggingMatrix) {
+              // 检查按键状态，如果是鼠标未按键则不选中，触摸屏始终有效
+              if (e.pointerType === 'mouse' && e.buttons === 0) return;
               toggleSelect(div, index);
             }
+            showMagnifier(e, r, g, b, x, y);
           });
-          div.addEventListener("pointerup", () => {
+
+          div.addEventListener("pointermove", (e) => {
+             if (e.pointerType !== 'mouse' && isDraggingMatrix) {
+                // 触摸移动时，pointerenter 可能不准确，这里主要更新放大镜
+                // 真正的高级触摸拖选通常需要 elementFromPoint，但 pointerenter 在 setPointerCapture 释放后可能无法跨元素触发
+                // 简单方案：保持当前逻辑，但确保放大镜跟随
+             }
+             updateMagnifierPosition(e);
+          });
+
+          div.addEventListener("pointerleave", () => {
+             hideMagnifier();
+          });
+          
+          div.addEventListener("pointerup", (e) => {
             isDraggingMatrix = false;
+            div.releasePointerCapture(e.pointerId);
+            hideMagnifier();
           });
-          matrixContainer.appendChild(div);
+          
+          fragment.appendChild(div);
         }
       }
+      matrixContainer.appendChild(fragment);
+    }
+    
+    function showMagnifier(e, r, g, b, x, y) {
+        // 移动端触摸时如果不传 r,g,b (如 pointermove 触发)，需要从 dataset 获取吗？
+        // 现在的逻辑是 showMagnifier 必须由 div 触发并传递数据
+        const colorPreview = `<span class="color-preview" style="background-color: rgb(${r},${g},${b})"></span>`;
+        magnifier.innerHTML = `
+            <strong>Pos: (${x}, ${y})</strong><br>
+            ${colorPreview} R: ${r}<br>
+            ${colorPreview} G: ${g}<br>
+            ${colorPreview} B: ${b}
+        `;
+        magnifier.style.display = 'block';
+        updateMagnifierPosition(e);
+    }
+    
+    function updateMagnifierPosition(e) {
+        const x = e.clientX;
+        const y = e.clientY;
+        
+        const isMobile = window.innerWidth <= 600;
+        
+        let targetX = x + 20;
+        let targetY = y + 20;
+        
+        // 手机端：放大镜显示在手指上方，防止遮挡
+        if (isMobile) {
+            targetX = x - 50; // 稍微居中
+            targetY = y - 110; // 向上偏移
+            
+            // 边界检查，防止超出顶部
+            if (targetY < 10) targetY = y + 30; // 如果上方空间不够，显示在下方
+        }
+        
+        // 右侧边界检查
+        const maxX = window.innerWidth - 120;
+        if (targetX > maxX) targetX = maxX;
+        if (targetX < 10) targetX = 10;
+        
+        magnifier.style.left = targetX + 'px';
+        magnifier.style.top = targetY + 'px';
+    }
+    
+    function hideMagnifier() {
+        magnifier.style.display = 'none';
     }
 
-    // 切换选择状态
     function toggleSelect(div, index) {
       if (selectedCells.has(index)) {
         selectedCells.delete(index);
@@ -524,53 +681,70 @@
       }
     }
 
-    // 清除选择
     clearSelectionBtn.addEventListener("click", () => {
       selectedCells.clear();
-      selection = null;
-      drawSelection();
-      matrixContainer.innerHTML = ""; // 清空像素矩阵
-      clearSelectionBtn.disabled = true;
-      addOneBtn.disabled = true;
-      highlightOddBtn.disabled = true;
+      // 不清除 selection 框选区域，只清除选中的像素点
+      const divs = matrixContainer.querySelectorAll('div.selected');
+      divs.forEach(div => div.classList.remove('selected'));
+      // 重置放大镜
+      hideMagnifier();
+    });
+    
+    // 全局释放拖动状态，防止意外卡死
+    window.addEventListener("pointerup", () => {
+      isDraggingMatrix = false;
+      isSelecting = false;
     });
 
-    // 添加事件监听器以停止拖动选择
-    document.addEventListener("pointerup", () => {
-      if (isDraggingMatrix) {
-        isDraggingMatrix = false;
-      }
-    });
-
-    // 选中像素加1
     addOneBtn.addEventListener("click", () => {
-      if (!imageData || selectedCells.size === 0) return;
+      if (!imageData || selectedCells.size === 0) {
+          alert("请先在矩阵中选择像素点");
+          return;
+      }
       const data = imageData.data;
+      
       selectedCells.forEach(index => {
-        // 对R, G, B通道分别加1，并确保不超过255
         data[index] = (data[index] + 1) % 256;
         data[index + 1] = (data[index + 1] + 1) % 256;
         data[index + 2] = (data[index + 2] + 1) % 256;
+        
+        const div = matrixContainer.querySelector(`div[data-index='${index}']`);
+        if (div) {
+            const r = data[index];
+            const g = data[index + 1];
+            const b = data[index + 2];
+            
+            div.dataset.r = r;
+            div.dataset.g = g;
+            div.dataset.b = b;
+            
+            div.innerHTML = `
+                <div class="content-wrapper">
+                    <span>R:${r}</span>
+                    <span>G:${g}</span>
+                    <span>B:${b}</span>
+                </div>
+            `;
+        }
       });
+      
       ctx.putImageData(imageData, 0, 0);
       alert("选中的像素已加1！");
-      showMatrix(); // 更新像素矩阵显示
       saveChangesBtn.disabled = false;
     });
 
-    // 奇数高亮功能
     highlightOddBtn.addEventListener("click", () => {
       if (!imageData || !selection) return;
       const { x1, y1, x2, y2 } = selection;
       const width = imageData.width;
       const data = imageData.data;
 
-      // 清除之前的奇数高亮
       const divs = matrixContainer.querySelectorAll('div');
       divs.forEach(div => {
         div.classList.remove('odd');
       });
-
+      
+      let found = false;
       for (let y = y1; y < y2; y++) {
         for (let x = x1; x < x2; x++) {
           const index = (y * width + x) * 4;
@@ -581,13 +755,16 @@
             const div = matrixContainer.querySelector(`div[data-index='${index}']`);
             if (div) {
               div.classList.add('odd');
+              found = true;
             }
           }
         }
       }
+      if(!found) {
+          alert("选区内没有符合 RGB 均为奇数的像素点。");
+      }
     });
 
-    // 保存修改后的图片
     saveChangesBtn.addEventListener("click", () => {
       if (!imageData) return;
       ctx.putImageData(imageData, 0, 0);
